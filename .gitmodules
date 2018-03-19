@@ -1,3 +1,6 @@
 [submodule "dhall-lang"]
 	path = dhall-lang
 	url = git@github.com:dhall-lang/dhall-lang.git
+[submodule "dhall-haskell"]
+	path = dhall-haskell
+	url = git@github.com:dhall-lang/dhall-haskell.git
