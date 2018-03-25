@@ -68,6 +68,10 @@
      (mapv second) ;; Every char is a two-element vector, take the actual char
      (apply str))) ;; Join
 
+(defn emit-list [content]
+  ;; Take only elements with even index, as the odd ones are parens and commas
+  (take-nth 2 (rest content)))
+
 
 (defn emit-primitive-expression [[tag [first-tag & others] & content]]
   (case first-tag
@@ -75,20 +79,15 @@
     :integer-literal        (emit-num others)
     :natural-literal        (emit-num others)
     :text-literal           (emit-string others)
-    ;:open-brace
-    ;:open-angle
-    ;:non-empty-list-literal
+    ;:open-brace - record-type-or-literal
+    ;:open-angle - union-type-or-literal
+    :non-empty-list-literal (emit-list others)
     ;:import
-    ;:identifier
-    ;:Natural-fold
-    ;:Natural-build
-    ;:Natural-isZero
-    ;:Natural-even
-    ;:Natural-odd
-    ;:Natural-toInteger
-    ;:Natural-show
-    :True true
-    :False false
+    ;;:identifier-reserved-namespaced-prefix
+    ;;:reserved-namespaced
+    ;;:identifier-reserved-prefix
+    ;;:reserved
+    :open-parens ;; TODO emit expression here
     [first-tag others])) ;; Here for debug
 
 (defn emit-selector-expression
