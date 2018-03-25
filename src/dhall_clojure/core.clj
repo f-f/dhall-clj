@@ -26,7 +26,7 @@
 
 
 
-
+;; TODO: move the grammar to resources?
 (def grammar (slurp "dhall-lang/standard/dhall.abnf"))
 
 (def dhall-parser
@@ -34,12 +34,6 @@
                 :input-format :abnf
                 :start :complete-expression
                 :output-format :hiccup))
-                
-
-(defn parse [expr]
-  ;; TODO: use insta/failure? to check if the result is good
-  ;; either here or when we generate clojure
-  (insta/parse dhall-parser expr))
 
 (declare emit-expression)
 
@@ -151,8 +145,22 @@
   expression)
 
 
-(def emit-substitution-map
-  {:complete-expression    emit-complete-expression
-   :expression             emit-expression
-   :record-type-or-literal emit-record-type-or-literal})
+;;;;; API
 
+(defn input
+  "Given a spec and a Dhall expression, parse the expression
+  and return a Clojure form conformed to the spec.
+  When no spec is given, still runs the Dhall typechecker,
+  but doesn't conform to a spec."
+  ;; TODO: Handle this case
+  ([expr] (input nil expr))
+  ([spec expr]
+   (let [transform-map {:complete-expression    emit-complete-expression
+                        :expression             emit-expression
+                        :record-type-or-literal emit-record-type-or-literal}
+         ;; TODO: use insta/failure? to check if the parsing was fine, fail early if not
+         ;; We should probably use the error monad here.
+         parsed (dhall-parser expr)]           ;; Parse: Dhall  -> Hiccup
+     ;; TODO: typecheck
+     ;; TODO: normalize
+     (insta/transform transform-map parsed)))) ;; Emit:  Hiccup -> Clojure
