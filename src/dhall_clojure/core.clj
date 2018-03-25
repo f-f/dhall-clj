@@ -42,7 +42,7 @@
   ;; TODO: emit symbol for param, it's a label
   `(fn [] ~(apply emit-expression expression)))
 
-(defn make-double [digits]
+(defn emit-double [digits]
   ;; TODO handle exponent
   (->> digits
      (map (fn [tag]
@@ -52,7 +52,7 @@
      (apply str)
      (read-string)))
 
-(defn make-num [digits]
+(defn emit-num [digits]
   (->> digits
      (map (fn [tag]
             (if (vector? tag)
@@ -61,12 +61,20 @@
      (apply str)
      (read-string)))
 
+(defn emit-string [[[tag & chars]]]
+  (->> chars
+     (rest)        ;; The first and
+     (butlast)     ;;  the last char are quotes, so we ignore them
+     (mapv second) ;; Every char is a two-element vector, take the actual char
+     (apply str))) ;; Join
+
+
 (defn emit-primitive-expression [[tag [first-tag & others] & content]]
   (case first-tag
-    :double-literal (make-double others)
-    :integer-literal (make-num others)
-    :natural-literal (make-num others)
-    ;:text-literal
+    :double-literal         (emit-double others)
+    :integer-literal        (emit-num others)
+    :natural-literal        (emit-num others)
+    :text-literal           (emit-string others)
     ;:open-brace
     ;:open-angle
     ;:non-empty-list-literal
