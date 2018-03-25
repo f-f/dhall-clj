@@ -16,21 +16,6 @@
       v)))
 
 
-(defn selector-expr-has-whitespace?
-  "There is a bug for which the labels get a whitespace tag
-  inserted even tho there is no space, resulting in single letter
-  labels. This means that we have to detect if there any _actual_
-  whitespace in the tree of the selector-expression."
-  [tree]
-  (let [has-ws? (fn [n]
-                  (cond
-                    (vector? n)             (some true? n)
-                    (= n :whitespace-chunk) true
-                    :else                   false))]
-    (postwalk has-ws? tree)))
-
-
-
 
 (defn emit-record-type-or-literal [& child]
   ;; Check if it's not an empty map
