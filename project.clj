@@ -5,5 +5,6 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.10.0-alpha4"]
                  [org.clojure/spec.alpha "0.1.143"]
-                 [org.clojure/tools.reader "1.0.3"]])
-                 ;[instaparse "1.4.8"]])
+                 [org.clojure/tools.reader "1.0.3"]
+                 [org.clojure/core.match "0.3.0-alpha5"]])
+                 ;;[instaparse "1.4.8"]])
