@@ -1,6 +1,7 @@
 (ns dhall-clojure.core
   (:require [instaparse.core :as insta]
             [clojure.string :as string]
+            [clojure.core.match :refer [match]]
             [clojure.walk :refer [postwalk prewalk walk]]))
 
 ;;;;;; UTIL
@@ -16,16 +17,6 @@
       v)))
 
 
-
-(defn emit-record-type-or-literal [& child]
-  ;; Check if it's not an empty map
-  ;; TODO actually differentiate the Type case
-  (if (and (seq []) (= (first child) :non-empty-record-type-or-literal))
-    (first child)
-    {}))
-
-
-
 ;; TODO: move the grammar to resources?
 (def grammar (slurp "dhall-lang/standard/dhall.abnf"))
 
@@ -35,12 +26,17 @@
                 :start :complete-expression
                 :output-format :hiccup))
 
-(declare emit-expression)
 
-(defn emit-lambda [open-parens param colon param-type close-parens arrow expression]
-  ;; TODO: type check on param-type
-  ;; TODO: emit symbol for param, it's a label
-  `(fn [] ~(apply emit-expression expression)))
+
+
+(defn emit-record-type-or-literal [& child]
+  ;; Check if it's not an empty map
+  ;; TODO actually differentiate the Type case
+  (if (and (seq []) (= (first child) :non-empty-record-type-or-literal))
+    (first child)
+    {}))
+
+
 
 (defn emit-double [digits]
   ;; TODO handle exponent
@@ -52,57 +48,53 @@
      (apply str)
      (read-string)))
 
-(defn emit-num [digits]
+(defn emit-num [[tag & digits] & {:keys [negative]}]
   (->> digits
-     (map (fn [tag]
-            (if (vector? tag)
-              (second (second tag))
-              tag)))
+     (map second)
      (apply str)
-     (read-string)))
+     (read-string)
+     (#(if negative (- %) %))))
 
-(defn emit-string [[[tag & chars]]]
+(defn emit-string [[[tag & chars] whitespace]]
+  (println tag)
+  (println chars)
   (->> chars
      (rest)        ;; The first and
      (butlast)     ;;  the last char are quotes, so we ignore them
+     (#(do (println %) %))
      (mapv second) ;; Every char is a two-element vector, take the actual char
      (apply str))) ;; Join
 
 (defn emit-list [content]
+  (println content)
   ;; Take only elements with even index, as the odd ones are parens and commas
   (take-nth 2 (rest content)))
 
 
-(defn emit-primitive-expression [[tag [first-tag & others] & content]]
-  (case first-tag
-    :double-literal         (emit-double others)
-    :integer-literal        (emit-num others)
-    :natural-literal        (emit-num others)
-    :text-literal           (emit-string others)
-    ;:open-brace - record-type-or-literal
-    ;:open-angle - union-type-or-literal
-    :non-empty-list-literal (emit-list others)
-    ;:import
-    ;;:identifier-reserved-namespaced-prefix
-    ;;:reserved-namespaced
-    ;;:identifier-reserved-prefix
-    ;;:reserved
-    :open-parens ;; TODO emit expression here
-    [first-tag others])) ;; Here for debug
+(defn emit-primitive-expression [& content]
+  (match (into [] content)
+    [[:double-literal & digits]]        (emit-double digits)
+    [[:natural-literal plus  digits _]] (emit-num digits)
+    [[:integer-literal minus digits _]] (emit-num digits :negative true)
+    [[:integer-literal       digits _]] (emit-num digits)
+    [[:text-literal & characters]]      (emit-string characters)
+    [[:non-empty-list-literal & elems]] (emit-list elems)
+    :else (do (println "Failed match: primitive-expression")
+              content)))
 
 (defn emit-selector-expression
   "Accessing map fields"
   [[tag primitive-expr & selectors]]
   ;; TODO handle the actual dot accessor
-  ;(emit-primitive-expression primitive-expr))
-  [primitive-expr selectors])
+  (emit-primitive-expression primitive-expr))
+  ;[primitive-expr selectors])
 
 (defn emit-application-expression
   "Function application, it's just a list"
   [[tag & content]]
   ;; TODO: support constructors
   ;; TODO FIXME: handle the record accessors being split in different selectors
-  ;(println content)
+  (println (str "Application expr" content))
   (if (seq (rest content))
     (map emit-selector-expression content)
     (emit-selector-expression (first content))))
@@ -130,22 +122,30 @@
 (defemit* emit-plus-expression        :plus        '+          emit-text-append-expression)
 (defemit* emit-or-expression          :or          'or         emit-plus-expression)
 
+(defn emit-annotated-expression [& content]
+  (match (into [] content)
+    [[:merge]]                           content ;; TODO
+    [[:open-bracket]]                    content ;; TODO
+    [[:operator-expression inner] _ typ] inner   ;; TODO add typ as meta
+    [[:operator-expression
+      [:or-expression inner]]]           (emit-or-expression inner)
+    :else (do (println "Failed match: annotated-expression")
+              content)))
 
+;;;;; Transform starting points
 
-(defn emit-expression [[first-tag & inner-content] & content]
-  ;;(println (str "first: " first-tag))
-  ;;(println inner-content)
-  (case first-tag
-    :lambda               (apply emit-lambda content)
-    :if                   "TODO"
-    :let                  "TODO"
-    :forall               "TODO"
-    :operator-expression  (do
-                            ;(println content) ;; TODO: wasn't this supposed to contain an arrow as well?
-                            (apply emit-or-expression inner-content))
-    :annotated-expression (apply emit-expression inner-content)))
-
-
+(defn emit-expression [& content]
+  (match (into [] content)
+    [[:lambda _ _] _ arg _ typ _ _ body] `(fn [~arg] ~body) ;; TODO add typ as meta
+    [[:if _ _] t _then e1 _else e2]      `(if ~t ~e1 ~e2)
+    ;; TODO let typed
+    ;; TODO let untyped
+    ;; TODO forall
+    ;[[:operator-expression inner] _ e1]  e1 ;; TODO what does this form mean?
+    [[:annotated-expression inner]]      (emit-annotated-expression inner)
+    :else (do (println "Failed match: expression")
+              content)))
+  
 (defn emit-complete-expression
   "Just discard whitespace here"
   [whitespace expression]
@@ -162,11 +162,14 @@
   ;; TODO: Handle this case
   ([expr] (input nil expr))
   ([spec expr]
+   ;; We have only some "starter" rules here in the transform-map, because
+   ;; in order to match the rules contained in other rules we need to go
+   ;; top-down. So we use these to "kickstart" the emission, and descend
+   ;; to the leaves of the tree with them.
    (let [transform-map {:complete-expression    emit-complete-expression
-                        :expression             emit-expression
-                        :record-type-or-literal emit-record-type-or-literal}
+                        :expression             emit-expression}
          ;; TODO: use insta/failure? to check if the parsing was fine, fail early if not
-         ;; We should probably use the error monad here.
+         ;; NOTE: we should probably use the error monad here.
          parsed (dhall-parser expr)]           ;; Parse: Dhall  -> Hiccup
      ;; TODO: typecheck
      ;; TODO: normalize
