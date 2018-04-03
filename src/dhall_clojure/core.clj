@@ -56,20 +56,15 @@
      (#(if negative (- %) %))))
 
 (defn emit-string [[[tag & chars] whitespace]]
-  (println tag)
-  (println chars)
   (->> chars
      (rest)        ;; The first and
      (butlast)     ;;  the last char are quotes, so we ignore them
-     (#(do (println %) %))
      (mapv second) ;; Every char is a two-element vector, take the actual char
      (apply str))) ;; Join
 
 (defn emit-list [content]
-  (println content)
   ;; Take only elements with even index, as the odd ones are parens and commas
   (take-nth 2 (rest content)))
-
 
 (defn emit-primitive-expression [& content]
   (match (into [] content)
@@ -87,29 +82,33 @@
   [[tag primitive-expr & selectors]]
   ;; TODO handle the actual dot accessor
   (emit-primitive-expression primitive-expr))
-  ;[primitive-expr selectors])
 
 (defn emit-application-expression
   "Function application, it's just a list"
-  [[tag & content]]
+  [[& content]]
   ;; TODO: support constructors
-  ;; TODO FIXME: handle the record accessors being split in different selectors
-  (println (str "Application expr" content))
   (if (seq (rest content))
-    (map emit-selector-expression content)
-    (emit-selector-expression (first content))))
+    (map #(emit-selector-expression (second %)) content)
+    (emit-selector-expression (-> content first second))))
 
 (defmacro defemit*
   [this-emit key sym next-emit]
-  `(defn ~this-emit [[tag# & exprs#]]
-     ;(println (str ~this-emit))
-     (if-not (seq (rest exprs#))
-       (do
-         ;(println exprs#)
-         (~next-emit (first exprs#)))
-       (let [tag-free# (remove #(= ~key (first %)) exprs#)]
-         ;(println (str "Multiple: " (into [] tag-free#)))
-         (list* ~sym (mapv ~next-emit tag-free#))))))
+  `(defn ~this-emit [[& exprs#]]
+     ;;(println (str ~this-emit))
+     ;;(println exprs#)
+     ;; Check that we're actually matching on the correct key
+     ;; The tag of the first element is the next expression we're evaluating
+     (assert (= (-> exprs# ffirst) ~(keyword (subs (str next-emit) 5))))
+     (let [unwrap# #(~next-emit (if (seq (rest %))
+                                  (rest %)
+                                  [(second %)]))]
+       (if-not (seq (rest exprs#))
+         (do
+           ;;(println (str "SINGLE: " exprs#))
+           (unwrap# (first exprs#)))
+         (let [tag-free# (remove #(= ~key (first %)) exprs#)]
+           ;;(println (str "MULTIPLE: " (into [] tag-free#)))
+           (list* ~sym (mapv unwrap# tag-free#)))))))
 
 (defemit* emit-not-equal-expression   :not-equal   'not=       emit-application-expression)
 (defemit* emit-equal-expression       :equal       '=          emit-not-equal-expression)
@@ -128,7 +127,7 @@
     [[:open-bracket]]                    content ;; TODO
     [[:operator-expression inner] _ typ] inner   ;; TODO add typ as meta
     [[:operator-expression
-      [:or-expression inner]]]           (emit-or-expression inner)
+      [:or-expression & inner]]]          (emit-or-expression inner)
     :else (do (println "Failed match: annotated-expression")
               content)))
 

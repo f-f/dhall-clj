@@ -21,13 +21,16 @@
    ;;; Record Type or Literal
    ;;; Union Type or Literal
    ;;; Non-Empty List
-   ["[1]"             '(1)]])
-   ;["[1 2 3]"         '(1 2 3)]])
-   ;["[\"A\"]"         '("A")]])
+   ["[1]"             '(1)]
+   ["[1, 2, 3]"       '(1 2 3)]
+   ["[\"A\"]"         '("A")]
    ;;; Import (TODO: all the kinds of imports)
    ;;; Identifier
    ;;; Reserved
    ;;; Expression in parens
+
+   ;;; Debug
+   ["1 || 2"          '(or 1 2)]])
    
 
 (deftest input-parsing
