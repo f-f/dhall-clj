@@ -28,13 +28,13 @@
    ;;; Identifier
    ;;; Reserved
    ;;; Expression in parens
-
    ;;; Debug
    ["1 || 2"          '(or 1 2)]])
-   
 
-(deftest input-parsing
+
+(deftest simple-input-parsing
   (doseq [[dhall clj-form] pairs]
     (testing (str "Dhall expr: " dhall)
       (let [parsed (input dhall)]
         (is (= clj-form parsed))))))
+
