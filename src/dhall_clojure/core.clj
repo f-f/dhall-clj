@@ -69,9 +69,9 @@
 (defn emit-primitive-expression [& content]
   (match (into [] content)
     [[:double-literal & digits]]        (emit-double digits)
-    [[:natural-literal plus  digits _]] (emit-num digits)
-    [[:integer-literal minus digits _]] (emit-num digits :negative true)
-    [[:integer-literal       digits _]] (emit-num digits)
+    [[:natural-literal     digits _]] (emit-num digits)
+    [[:integer-literal "-" digits _]] (emit-num digits :negative true)
+    [[:integer-literal "+" digits _]] (emit-num digits)
     [[:text-literal & characters]]      (emit-string characters)
     [[:non-empty-list-literal & elems]] (emit-list elems)
     :else (do (println "Failed match: primitive-expression")
