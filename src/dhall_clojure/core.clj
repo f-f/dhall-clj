@@ -2,7 +2,8 @@
   (:require [instaparse.core :as insta]
             [clojure.string :as string]
             [clojure.core.match :refer [match]]
-            [clojure.walk :refer [postwalk prewalk walk]]))
+            [clojure.walk :refer [postwalk prewalk walk]]
+            [dhall-clojure.in.parser :refer [dhall-parser]]))
 
 ;;;;;; UTIL
 ;; Credit: https://gist.github.com/danielpcox/c70a8aa2c36766200a95#gistcomment-2313926
@@ -16,15 +17,6 @@
       (reduce #(rec-merge %1 %2) v vs)
       v)))
 
-
-;; TODO: move the grammar to resources?
-(def grammar (slurp "dhall-lang/standard/dhall.abnf"))
-
-(def dhall-parser
-  (insta/parser grammar
-                :input-format :abnf
-                :start :complete-expression
-                :output-format :hiccup))
 
 
 
