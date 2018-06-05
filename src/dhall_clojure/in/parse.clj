@@ -45,6 +45,7 @@
   (cond
     (map? tree) (apply str (mapv compact (:c tree)))
     (string? tree) tree
+    (seqable? tree) (apply str (mapv compact tree))
     :else tree))
 
 ;;
@@ -159,7 +160,7 @@
       :double-literal (-> children first compact read-string ->DoubleLit)
       :natural-literal (-> children first compact read-string ->NaturalLit)
       :integer-literal (-> children first compact read-string ->IntegerLit)
-      :text-literal ""
+      :text-literal (-> children first expr)
       :open-brace ""
       :open-angle ""
       :non-empty-list-literal ""
@@ -169,6 +170,51 @@
       :reserved ""
       :identifier ""
       :open-parens "")))
+
+(defmethod expr :text-literal [e]
+  (let [first-tag (-> e :c first :t)
+        children (:c e)]
+    (->TextLit
+      (if (= first-tag :double-quote-literal)
+        ;; If it's a double quoted string, we fold on the children,
+        ;; so that we collapse the contiguous strings in a single chunk,
+        ;; while skipping the interpolation expressions
+        (loop [children (-> children first :c rest butlast) ;; Skip the quotes
+               acc nil
+               chunks []]
+          (if (seq children)
+            (let [chunk (first children)
+                  content (:c chunk)]
+              (if (every? string? content)  ;; If they are not strings, it's an interpolation
+                (recur (rest children)
+                       (str acc (apply str content))
+                       chunks)
+                (recur (rest children)
+                       nil
+                       (conj chunks acc (expr (nth content 1))))))
+            ;; If we have no children left to process,
+            ;; we return the chunks we have, plus the accomulator
+            (if-not acc
+              chunks
+              (conj chunks acc))))
+        ;; Otherwise it's a single quote literal,
+        ;; so we recur over the children until we find an ending literal.
+        ;; As above, we make expressions out of interpolation syntax
+        (loop [children (-> children first :c second :c)
+               acc nil
+               chunks []]
+          (if (= children ["''"])
+            (if-not acc  ;; If we have chars left in acc
+              chunks
+              (conj chunks acc))
+            (if (not= (first children) "${")  ;; Check if interpolation
+              ;; If not we just add the string and recur
+              (recur (-> children second :c)
+                     (str acc (first children))
+                     chunks)
+              (recur (-> children (nth 3) :c)
+                     nil
+                     (conj chunks acc (expr (second children)))))))))))
 
 ;; Default case, we end up here when there is no matches
 (defmethod expr :default [e]

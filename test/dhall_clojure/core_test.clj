@@ -32,11 +32,23 @@
               (->IntegerLit -12)
               -12)
    (Testcase. "\"ABC\""
-              (->TextLit "ABC")
+              (->TextLit ["ABC"])
               "ABC")
    (Testcase. "\"\""
-              (->TextLit "")
+              (->TextLit [])
               "")
+   (Testcase. "\"\\\"aaaa\""
+              (->TextLit ["\\\"aaaa"])
+              "\\\"aaaa")
+   (Testcase. "\"abab ${1} cd\""
+              (->TextLit ["abab " (->NaturalLit 1) " cd"])
+              "abab 1 cd")
+   (Testcase. "''abcd''"
+              (->TextLit ["abcd"])
+              "abcd")
+   (Testcase. "''a${1}b''"
+              (->TextLit ["a" (->NaturalLit 1) "b"])
+              "a1b")
    (Testcase. "[1]"
               (->ListLit nil [(->NaturalLit 1)])
               '(1))
@@ -52,8 +64,10 @@
 
 
 (deftest simple-input-parsing
-  (doseq [{:keys [dhall tree clojure]} (take 8 cases)]
+  (doseq [{:keys [dhall tree clojure]} (take 14 cases)]
     (testing (str "Correct Expr Tree for Dhall expr: " dhall)
+      ;(println tree)
+      ;(println (-> dhall parse expr))
       (is (.equals (-> dhall parse expr) tree)))))
 
 (def parser-suite-results
