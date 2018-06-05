@@ -12,8 +12,8 @@
   ([expr] (input nil expr))
   ([spec expr]
    (some-> expr
-           parse  ;; Dhall  -> Hiccup
+           parse)))  ;; Dhall  -> ParseTree
            ;; TODO: resolve imports
            ;; TODO: typecheck
            ;; TODO: normalize
-           emit)))  ;; Hiccup -> Clojure
+           ;;emit)))  ;; ParseTree -> Clojure
