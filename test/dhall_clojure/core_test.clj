@@ -1,42 +1,60 @@
 (ns dhall-clojure.core-test
   (:require [clojure.test :refer :all]
+            [dhall-clojure.in.core :refer :all]
+            [dhall-clojure.in.parse :refer [parse expr]]
             [dhall-clojure.core :refer [input]]))
 
-(def pairs
-  [;; Primitive Expressions
-   ;;; Double
-   ["2.0"             2.0]
-   ["-2.0"            -2.0]
-   ;; TODO: exponent
-   ;;; Natural
-   ["+1"              1]
-   ["+12"             12]
-   ;;; Integer
-   ["1"               1]
-   ["-12"             -12]
-   ["0"               0]
-   ;;; Text
-   ["\"ABC\""         "ABC"]
-   ["\"\""            ""]
-   ;;; Record Type or Literal
-   ;;; Union Type or Literal
-   ;;; Non-Empty List
-   ["[1]"             '(1)]
-   ["[1, 2, 3]"       '(1 2 3)]
-   ["[\"A\"]"         '("A")]
-   ;;; Import (TODO: all the kinds of imports)
-   ;;; Identifier
-   ;;; Reserved
-   ;;; Expression in parens
-   ;;; Debug
-   ["1 || 2"          '(or 1 2)]])
+(defrecord Testcase [dhall tree clojure])
+
+(def cases
+  [(Testcase. "2.0"
+              (->DoubleLit 2.0)
+              2.0)
+   (Testcase. "-2.0"
+              (->DoubleLit -2.0)
+              -2.0)
+   (Testcase. "-1.0e-3"
+              (->DoubleLit -0.001)
+              -0.001)
+   (Testcase. "1"
+              (->NaturalLit 1)
+              1)
+   (Testcase. "12"
+              (->NaturalLit 12)
+              12)
+   (Testcase. "0"
+              (->NaturalLit 0)
+              0)
+   (Testcase. "+1"
+              (->IntegerLit 1)
+              1)
+   (Testcase. "-12"
+              (->IntegerLit -12)
+              -12)
+   (Testcase. "\"ABC\""
+              (->TextLit "ABC")
+              "ABC")
+   (Testcase. "\"\""
+              (->TextLit "")
+              "")
+   (Testcase. "[1]"
+              (->ListLit nil [(->NaturalLit 1)])
+              '(1))
+   (Testcase. "[1, 2, 3]"
+              (->ListLit nil [(->NaturalLit 1) (->NaturalLit 2) (->NaturalLit 3)])
+              '(1 2 3))
+   (Testcase. "[\"A\"]"
+              (->ListLit nil [(->TextLit "A")])
+              '("A"))
+   (Testcase. "True || False"
+              (->BoolOr (->NaturalLit 1) (->NaturalLit 2))
+              '(or 1 2))])
 
 
 (deftest simple-input-parsing
-  (doseq [[dhall clj-form] pairs]
-    (testing (str "Dhall expr: " dhall)
-      (let [parsed (input dhall)]
-        (is (= clj-form parsed))))))
+  (doseq [{:keys [dhall tree clojure]} (take 8 cases)]
+    (testing (str "Correct Expr Tree for Dhall expr: " dhall)
+      (is (.equals (-> dhall parse expr) tree)))))
 
 (def parser-suite-results
   [])  ;; TODO: implement forms and add results here
