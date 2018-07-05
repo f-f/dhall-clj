@@ -58,6 +58,9 @@
    (Testcase. "[\"A\"]"
               (->ListLit nil [(->TextLit "A")])
               '("A"))
+   (Testcase. "1 ? 2"
+              (->ImportAlt (->NaturalLit 1) (->NaturalLit 2))
+              1)
    (Testcase. "True || False"
               (->BoolOr (->NaturalLit 1) (->NaturalLit 2))
               '(or 1 2))])
