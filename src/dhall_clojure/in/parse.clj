@@ -151,7 +151,7 @@
       :natural-literal (-> children first compact read-string ->NaturalLit)
       :integer-literal (-> children first compact read-string ->IntegerLit)
       :text-literal (-> children first expr)
-      :open-brace ""
+      :open-brace (-> children second expr)
       :open-angle ""
       :non-empty-list-literal ""
       :identifier-reserved-namespaced-prefix ""
@@ -160,6 +160,32 @@
       :reserved ""
       :identifier ""
       :open-parens "")))
+
+(defmethod expr :record-type-or-literal [e]
+  (let [first-tag (-> e :c first :t)]
+    (case first-tag
+      :equal                            (->RecordLit {}) ;; Empty record literal
+      :non-empty-record-type-or-literal (-> e :c first expr)
+      (->RecordT {}))))                                  ;; Empty record type
+
+(defmethod expr :non-empty-record-type-or-literal [e]
+  (let [first-label (-> e :c first expr)
+        other-vals (-> e :c second)
+        record-literal? (= (:t other-vals) :non-empty-record-literal)
+        [first-val other-kvs] [(-> other-vals :c second expr)
+                               (->> (-> other-vals :c (nthrest 2))
+                                  (partition 4)
+                                  (mapv (fn [[comma label sep expr']]
+                                          {(expr label)
+                                           (expr expr')}))
+                                  (apply merge))]]
+    ((if record-literal?
+       ->RecordLit
+       ->RecordT)
+     (merge {first-label first-val} other-kvs))))
+
+(defmethod expr :label [e]
+  e) ;; TODO
 
 (defmethod expr :text-literal [e]
   (let [first-tag (-> e :c first :t)

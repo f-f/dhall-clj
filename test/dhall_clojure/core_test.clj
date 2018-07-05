@@ -49,25 +49,33 @@
    (Testcase. "''a${1}b''"
               (->TextLit ["a" (->NaturalLit 1) "b"])
               "a1b")
-   (Testcase. "[1]"
-              (->ListLit nil [(->NaturalLit 1)])
-              '(1))
-   (Testcase. "[1, 2, 3]"
-              (->ListLit nil [(->NaturalLit 1) (->NaturalLit 2) (->NaturalLit 3)])
-              '(1 2 3))
-   (Testcase. "[\"A\"]"
-              (->ListLit nil [(->TextLit "A")])
-              '("A"))
+   ;;(Testcase. "[1]"
+   ;;           (->ListLit nil [(->NaturalLit 1)])
+   ;;           '(1))
+   ;;(Testcase. "[1, 2, 3]"
+   ;;           (->ListLit nil [(->NaturalLit 1) (->NaturalLit 2) (->NaturalLit 3)])
+   ;;           '(1 2 3))
+   ;;(Testcase. "[\"A\"]"
+   ;;           (->ListLit nil [(->TextLit "A")])
+   ;;           '("A"))
    (Testcase. "1 ? 2"
               (->ImportAlt (->NaturalLit 1) (->NaturalLit 2))
               1)
-   (Testcase. "True || False"
-              (->BoolOr (->NaturalLit 1) (->NaturalLit 2))
-              '(or 1 2))])
+   (Testcase. "{}"
+              (->RecordT {})
+              {}) ;; TODO: is this the actual clj value?
+   (Testcase. "{=}"
+              (->RecordLit {})
+              {})])
+   ;; TODO record literal with 1, 2 keys
+   ;; TODO record type with 1, 2 keys
+   ;;(Testcase. "True || False"
+   ;;           (->BoolOr (->NaturalLit 1) (->NaturalLit 2))
+   ;;           '(or 1 2))])
 
 
 (deftest simple-input-parsing
-  (doseq [{:keys [dhall tree clojure]} (take 14 cases)]
+  (doseq [{:keys [dhall tree clojure]} cases]
     (testing (str "Correct Expr Tree for Dhall expr: " dhall)
       ;(println tree)
       ;(println (-> dhall parse expr))
