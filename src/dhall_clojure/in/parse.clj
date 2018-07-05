@@ -13,7 +13,7 @@
 
 (defn clean
   "Cut the names of the attrs of the tree
-  TODO: save the meta?"
+  TODO: save the meta!"
   [tree]
   (if (map? tree)
     {:c (mapv clean (:content tree))
@@ -98,19 +98,6 @@
                              (expr (first children))))))
 
 
-(defmethod expr :or-expression [e]
-  (if (> (count (:c e)) 1)
-    (let [exprs (remove #(= :or (:t %)) (:c e))]
-      (loop [more (nnext exprs)
-             or (->BoolOr
-                  (expr (first exprs))
-                  (expr (second exprs)))]
-        (if (empty? more)
-          or
-          (recur (rest more)
-                 (->BoolOr or (expr (first more)))))))
-    (expr (-> e :c first))))
-
 (defmacro defexpr*
   "Generalize `defmethod` for the cases in which we need to do
   something like:
@@ -131,6 +118,9 @@
                       (~expr-constructor start# (expr (first more#)))))))
          (expr (-> e# :c first))))))
 
+
+(defexpr* :import-alt-expression    ImportAlt    :import-alt)
+(defexpr* :or-expression            BoolOr       :or)
 (defexpr* :plus-expression          NaturalPlus  :plus)
 (defexpr* :text-append-expression   TextAppend   :text-append)
 (defexpr* :list-append-expression   ListAppend   :list-append)

@@ -61,5 +61,13 @@
 (defrecord Constructors [e])
 (defrecord Field [e k])
 (defrecord Project [e ks])
-;; TODO: Note
-;; TODO: Embed
+(defrecord ImportAlt [l r])
+
+;; Note on compiler implementation:
+;; this is basically the same Expr type that the Haskell implementation
+;; has in Dhall.Core for the AST.
+;; However, two constructors are missing here:
+;; - `Note`: this is used there for keeping track of the source position.
+;;   Here we use the metadata on nodes for that.
+;; - `Embed`: it's there to make extending the type nice there, while
+;;   keeping type safety. Here we just hope we have enough tests :)

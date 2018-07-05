@@ -76,9 +76,12 @@
 (deftest dhall-haskell-parser-suite
   (let [dhall-files (-> "dhall-haskell/tests/parser"
                        clojure.java.io/file
-                       file-seq  ;; get the list of files in the dir
-                       rest)     ;; we do rest here because the first element is the directory itself
-        dhall-strings (mapv slurp dhall-files)]
+                       file-seq)  ;; get the list of files in the dir
+        dhall-strings (->> dhall-files
+                         ;; we try here because if it's a folder we cannot slurp it
+                         (mapv #(try (slurp %)
+                                     (catch Exception e nil)))
+                         (remove nil?))]
     (doseq [[dhall clj-form] (mapv list dhall-strings parser-suite-results)]
       (testing (str "Dhall expr: " dhall)
         (let [parsed (input dhall)]
