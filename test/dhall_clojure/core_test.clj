@@ -49,15 +49,15 @@
    (Testcase. "''a${1}b''"
               (->TextLit ["a" (->NaturalLit 1) "b"])
               "a1b")
-   ;;(Testcase. "[1]"
-   ;;           (->ListLit nil [(->NaturalLit 1)])
-   ;;           '(1))
-   ;;(Testcase. "[1, 2, 3]"
-   ;;           (->ListLit nil [(->NaturalLit 1) (->NaturalLit 2) (->NaturalLit 3)])
-   ;;           '(1 2 3))
-   ;;(Testcase. "[\"A\"]"
-   ;;           (->ListLit nil [(->TextLit "A")])
-   ;;           '("A"))
+   (Testcase. "[1]"
+              (->ListLit nil [(->NaturalLit 1)])
+              '(1))
+   (Testcase. "[1, 2, 3]"
+              (->ListLit nil [(->NaturalLit 1) (->NaturalLit 2) (->NaturalLit 3)])
+              '(1 2 3))
+   (Testcase. "[\"A\"]"
+              (->ListLit nil [(->TextLit ["A"])])
+              '("A"))
    (Testcase. "1 ? 2"
               (->ImportAlt (->NaturalLit 1) (->NaturalLit 2))
               1)

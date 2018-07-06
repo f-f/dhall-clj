@@ -152,8 +152,8 @@
       :integer-literal (-> children first compact read-string ->IntegerLit)
       :text-literal (-> children first expr)
       :open-brace (-> children second expr)
-      :open-angle ""
-      :non-empty-list-literal ""
+      :open-angle "TODO open-angle"
+      :non-empty-list-literal (-> children first expr)
       :identifier-reserved-namespaced-prefix ""
       :reserved-namespaced ""
       :identifier-reserved-prefix ""
@@ -186,6 +186,12 @@
 
 (defmethod expr :label [e]
   e) ;; TODO
+
+(defmethod expr :non-empty-list-literal [e]
+  ;; TODO: I guess here we'd need multi-arity to be able to pass
+  ;; in the optional type of the list
+  (let [vals (->> e :c rest (take-nth 2) (mapv expr))]
+    (->ListLit nil vals)))
 
 (defmethod expr :text-literal [e]
   (let [first-tag (-> e :c first :t)
