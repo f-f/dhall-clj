@@ -66,8 +66,15 @@
               {}) ;; TODO: is this the actual clj value?
    (Testcase. "{=}"
               (->RecordLit {})
-              {})])
-   ;; TODO record literal with 1, 2 keys
+              {})
+   (Testcase. "{fo-o=1, `Text`=2}"
+              (->RecordLit {"`Text`" (->NaturalLit 2)
+                            "fo-o"   (->NaturalLit 1)})
+              {:Text 1
+               :fo-o 2})
+   (Testcase. "{ _bar = 4 }"
+              (->RecordLit {"_bar" (->NaturalLit 4)})
+              {:_bar 4})])
    ;; TODO record type with 1, 2 keys
    ;;(Testcase. "True || False"
    ;;           (->BoolOr (->NaturalLit 1) (->NaturalLit 2))

@@ -185,7 +185,17 @@
      (merge {first-label first-val} other-kvs))))
 
 (defmethod expr :label [e]
-  e) ;; TODO
+  (let [quoted? (-> e :c first string?) ;; a quoted label is preceded by `
+        actual-label ((if quoted? second first) (:c e))
+        str-label (->> actual-label :c
+                      (mapv (fn [ch]
+                              (if (string? ch)
+                                ch
+                                (-> ch :c first))))
+                      (apply str))]
+    (if quoted?
+      (str "`" str-label "`")
+      str-label)))
 
 (defmethod expr :non-empty-list-literal [e]
   ;; TODO: I guess here we'd need multi-arity to be able to pass
