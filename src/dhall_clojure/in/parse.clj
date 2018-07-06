@@ -97,6 +97,20 @@
                                (expr (nth children 2)))
                              (expr (first children))))))
 
+(defmethod expr :reserved-raw [e]
+  (let [first-tag (-> e :c first :t)]
+    (case first-tag
+      :Bool-raw     (->BoolT)
+      :Optional-raw (->OptionalT)
+      :Natural-raw  (->NaturalT)
+      :Integer-raw  (->IntegerT)
+      :Double-raw   (->DoubleT)
+      :Text-raw     (->TextT)
+      :List-raw     (->ListT)
+      :True-raw     (->BoolLit true)
+      :False-raw    (->BoolLit false)
+      :Type-raw     (->Const :type)
+      :Kind-raw     (->Const :kind))))
 
 (defmacro defexpr*
   "Generalize `defmethod` for the cases in which we need to do
@@ -157,7 +171,7 @@
       :identifier-reserved-namespaced-prefix "TODO reserved namespaced prefix"
       :reserved-namespaced "TODO reserved namespaced"
       :identifier-reserved-prefix "TODO reserved prefix"
-      :reserved "TODO reserved"
+      :reserved (-> children first :c first expr) ;; this returns a :reserved-raw
       :identifier "TODO identifier"
       :open-parens "TODO open-parens")))
 
