@@ -74,8 +74,14 @@
                :fo-o 2})
    (Testcase. "{ _bar = 4 }"
               (->RecordLit {"_bar" (->NaturalLit 4)})
-              {:_bar 4})])
-   ;; TODO record type with 1, 2 keys
+              {:_bar 4})
+   (Testcase. "{fo-o : Natural, `Text` : Text}"
+              (->RecordT {"`Text`" (->TextT)
+                          "fo-o"   (->NaturalT)})
+              {}) ;; TODO check this type
+   (Testcase. "{ _bar : Natural }"
+              (->RecordT {"_bar" (->NaturalT)})
+              {})]) ;; TODO check this type
    ;;(Testcase. "True || False"
    ;;           (->BoolOr (->NaturalLit 1) (->NaturalLit 2))
    ;;           '(or 1 2))])
