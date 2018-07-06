@@ -81,10 +81,10 @@
               {}) ;; TODO check this type
    (Testcase. "{ _bar : Natural }"
               (->RecordT {"_bar" (->NaturalT)})
-              {})]) ;; TODO check this type
-   ;;(Testcase. "True || False"
-   ;;           (->BoolOr (->NaturalLit 1) (->NaturalLit 2))
-   ;;           '(or 1 2))])
+              {}) ;; TODO check this type
+   (Testcase. "True || False"
+              (->BoolOr (->BoolLit true) (->BoolLit false))
+              '(or true false))])
 
 
 (deftest simple-input-parsing
