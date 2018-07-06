@@ -75,22 +75,22 @@
   (let [first-tag (-> e :c first :t)
         children (:c e)]
     (case first-tag
-      :lambda ""
+      :lambda "TODO lambda"
       :if (->BoolIf
             (expr (nth children 1))
             (expr (nth children 3))
             (expr (nth children 5)))
-      :let ""
-      :forall ""
-      :operator-expression ""
+      :let "TODO let"
+      :forall "TODO forall"
+      :operator-expression "TODO operator expr"
       :annotated-expression (expr (first children)))))
 
 (defmethod expr :annotated-expression [e]
   (let [first-tag (-> e :c first :t)
         children (:c e)]
     (case first-tag
-      :merge ""
-      :open-bracket ""
+      :merge "TODO merge"
+      :open-bracket "TODO open-bracket"
       :operator-expression (if (> (count children) 1)
                              (->Annot
                                (expr (first children))
@@ -154,12 +154,12 @@
       :open-brace (-> children second expr)
       :open-angle "TODO open-angle"
       :non-empty-list-literal (-> children first expr)
-      :identifier-reserved-namespaced-prefix ""
-      :reserved-namespaced ""
-      :identifier-reserved-prefix ""
-      :reserved ""
-      :identifier ""
-      :open-parens "")))
+      :identifier-reserved-namespaced-prefix "TODO reserved namespaced prefix"
+      :reserved-namespaced "TODO reserved namespaced"
+      :identifier-reserved-prefix "TODO reserved prefix"
+      :reserved "TODO reserved"
+      :identifier "TODO identifier"
+      :open-parens "TODO open-parens")))
 
 (defmethod expr :record-type-or-literal [e]
   (let [first-tag (-> e :c first :t)]
