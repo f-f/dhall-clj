@@ -112,6 +112,29 @@
       :Type-raw     (->Const :type)
       :Kind-raw     (->Const :kind))))
 
+(defmethod expr :reserved-namespaced-raw [e]
+  (let [first-tag (-> e :c first :t)]
+    (case first-tag
+      :Natural-fold-raw      (->NaturalFold)
+      :Natural-build-raw     (->NaturalBuild)
+      :Natural-isZero-raw    (->NaturalIsZero)
+      :Natural-even-raw      (->NaturalEven)
+      :Natural-odd-raw       (->NaturalOdd)
+      :Natural-toInteger-raw (->NaturalToInteger)
+      :Natural-show-raw      (->NaturalShow)
+      :Integer-toDouble-raw  (->IntegerToDouble)
+      :Integer-show-raw      (->IntegerShow)
+      :Double-show-raw       (->DoubleShow)
+      :List-build-raw        (->ListBuild)
+      :List-fold-raw         (->ListFold)
+      :List-length-raw       (->ListLength)
+      :List-head-raw         (->ListHead)
+      :List-last-raw         (->ListLast)
+      :List-indexed-raw      (->ListIndexed)
+      :List-reverse-raw      (->ListReverse)
+      :Optional-fold-raw     (->OptionalFold)
+      :Optional-build-raw    (->OptionalBuild))))
+
 (defmacro defexpr*
   "Generalize `defmethod` for the cases in which we need to do
   something like:
@@ -169,9 +192,9 @@
       :open-angle "TODO open-angle"
       :non-empty-list-literal (-> children first expr)
       :identifier-reserved-namespaced-prefix "TODO reserved namespaced prefix"
-      :reserved-namespaced "TODO reserved namespaced"
+      :reserved-namespaced (-> children first :c first expr) ;; returns a :reserved-namespaced-raw
       :identifier-reserved-prefix "TODO reserved prefix"
-      :reserved (-> children first :c first expr) ;; this returns a :reserved-raw
+      :reserved (-> children first :c first expr) ;; returns a :reserved-raw
       :identifier "TODO identifier"
       :open-parens "TODO open-parens")))
 

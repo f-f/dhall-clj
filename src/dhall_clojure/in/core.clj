@@ -30,6 +30,7 @@
 (defrecord IntegerT [])
 (defrecord IntegerLit [n])
 (defrecord IntegerShow [])
+(defrecord IntegerToDouble [])
 (defrecord DoubleT [])
 (defrecord DoubleLit [n])
 (defrecord DoubleShow [])

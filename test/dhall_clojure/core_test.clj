@@ -82,6 +82,9 @@
    (Testcase. "{ _bar : Natural }"
               (->RecordT {"_bar" (->NaturalT)})
               {}) ;; TODO check this type
+   (Testcase. "Natural/show"
+              (->NaturalShow)
+              str)
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])
