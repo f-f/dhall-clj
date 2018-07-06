@@ -84,7 +84,13 @@
               {}) ;; TODO check this type
    (Testcase. "Natural/show"
               (->NaturalShow)
-              str)
+              'str)
+   (Testcase. "List/fold-With"
+              (->Var "List/fold-With" 0)
+              'list/fold-With)
+   (Testcase. "List/map"
+              (->Var "List/map" 0)
+              'list/map)
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])

@@ -135,6 +135,28 @@
       :Optional-fold-raw     (->OptionalFold)
       :Optional-build-raw    (->OptionalBuild))))
 
+(defmethod expr :identifier-reserved-namespaced-prefix [e]
+  (let [children (:c e)
+        prefix (->> children first :c first :c (apply str))
+        label (->> children rest
+                   (mapv (fn [ch]
+                           (if (string? ch)
+                             ch
+                             (-> ch :c first))))
+                   (apply str))]
+    (->Var (str prefix label) 0))) ;; TODO: is i always 0?
+
+(defmethod expr :identifier-reserved-prefix [e]
+  (let [children (:c e)
+        prefix (->> children first :c first :c (apply str))
+        label (->> children rest
+                 (mapv (fn [ch]
+                         (if (string? ch)
+                           ch
+                           (-> ch :c first))))
+                 (apply str))]
+    (->Var (str prefix label) 0))) ;; TODO: is i always 0?
+
 (defmacro defexpr*
   "Generalize `defmethod` for the cases in which we need to do
   something like:
@@ -191,9 +213,9 @@
       :open-brace (-> children second expr)
       :open-angle "TODO open-angle"
       :non-empty-list-literal (-> children first expr)
-      :identifier-reserved-namespaced-prefix "TODO reserved namespaced prefix"
+      :identifier-reserved-namespaced-prefix (-> children first expr)
       :reserved-namespaced (-> children first :c first expr) ;; returns a :reserved-namespaced-raw
-      :identifier-reserved-prefix "TODO reserved prefix"
+      :identifier-reserved-prefix (-> children first expr)
       :reserved (-> children first :c first expr) ;; returns a :reserved-raw
       :identifier "TODO identifier"
       :open-parens "TODO open-parens")))
