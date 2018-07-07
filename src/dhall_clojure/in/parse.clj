@@ -109,7 +109,7 @@
       :open-bracket        (-> c second expr)
       :operator-expression (if (> (count c) 1)
                              (->Annot
-                               (expr (first c))
+                               (expr (nth c 0))
                                (expr (nth c 2)))
                              (expr (first c))))))
 
@@ -234,7 +234,7 @@
       (loop [more (nnext exprs)
              app (if constructors?
                    (->Constructors (expr (second exprs)))
-                   (->BoolOr
+                   (->App
                      (expr (first exprs))
                      (expr (second exprs))))]
         (if (empty? more)
@@ -367,8 +367,8 @@
       str-label)))
 
 (defmethod expr :non-empty-list-literal [e]
-  ;; TODO: I guess here we'd need multi-arity to be able to pass
-  ;; in the optional type of the list
+  ;; Here we always pass the type as nil, because it's a non empty list,
+  ;; and the eventual type annotation has this wrapped in an Annot
   (let [vals (->> e :c rest (take-nth 2) (mapv expr))]
     (->ListLit nil vals)))
 

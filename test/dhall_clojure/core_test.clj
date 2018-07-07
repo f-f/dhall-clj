@@ -61,6 +61,10 @@
    (Testcase. "[] : List Natural"
               (->ListLit (->NaturalT) [])
               [])
+   (Testcase. "[2] : List Natural"
+              (->Annot (->ListLit nil [(->NaturalLit 2)])
+                       (->App (->ListT) (->NaturalT)))
+              '(2))
    (Testcase. "[] : Optional Natural"
               (->OptionalLit (->NaturalT) nil)
               nil)
@@ -156,6 +160,9 @@
    (Testcase. "Text -> Natural"
               (->Pi "_" (->TextT) (->NaturalT))
               nil) ;; TODO figure out the clj
+   (Testcase. "Natural/even 3"
+              (->App (->NaturalEven) (->NaturalLit 3))
+              '(even? 3))
    (Testcase. "constructors < A : Bool >"
               (->Constructors (->UnionT {"A" (->BoolT)}))
               nil) ;; TODO figure out the clj
