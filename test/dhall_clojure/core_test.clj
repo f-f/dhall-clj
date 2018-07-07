@@ -144,6 +144,15 @@
                        (->UnionLit "Left" (->NaturalLit 3) {"Right" (->BoolT)})
                        (->BoolT))
               {}) ;; TODO figure out the clj
+   (Testcase. "let x : t = e1 in e2"
+              (->Let "x" (->Var "t" 0) (->Var "e1" 0) (->Var "e2" 0))
+              '(let [x e1] e2))
+   (Testcase. "let x = e1 in e2"
+              (->Let "x" nil (->Var "e1" 0) (->Var "e2" 0))
+              '(let [x e1] e2))
+   (Testcase. "forall (x : a) -> b"
+              (->Pi "x" (->Var "a" 0) (->Var "b" 0))
+              nil) ;; TODO figure out the clj
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])
