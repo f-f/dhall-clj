@@ -135,28 +135,36 @@
       :Optional-fold-raw     (->OptionalFold)
       :Optional-build-raw    (->OptionalBuild))))
 
-(defn identifier-with-reserved-prefix [e]
+(defn identifier [e]
   (let [children (:c e)
-        ;; the prefix is the reserved word
-        prefix (->> children first :c first :c (apply str))
+        ;; if we have  a simple identifier, the "prefix" is just the label
+        ;; if instead it's a prefixed identifier, the prefix is the reserved word
+        prefix (if (= :identifier (:t e))
+                 (->> children first expr)
+                 (->> children first :c first :c (apply str)))
         ;; at the end of `children` there might be a DeBrujin index
         maybe-index (-> children butlast last)
-        index? (= :whitespace (:t maybe-index))
+        index? (= :natural-raw (:t maybe-index))
         index (if index?
-                0    ;; TODO: is i always 0?
-                (-> maybe-index :c first :c first read-string))
+                (-> maybe-index :c first :c first read-string)
+                0)    ;; TODO: is i always 0?
         ;; the label is the rest of the chars
+        ;; if it's an identifier without prefix this is going to
+        ;; be an empty string, so all good
         label (->> children
                  rest
-                 (drop-last (if index? 2 4))
+                 (drop-last (if index? 3 1))
                  compact)]
     (->Var (str prefix label) index)))
 
+(defmethod expr :identifier [e]
+  (identifier e))
+
 (defmethod expr :identifier-reserved-namespaced-prefix [e]
-  (identifier-with-reserved-prefix e))
+  (identifier e))
 
 (defmethod expr :identifier-reserved-prefix [e]
-  (identifier-with-reserved-prefix e))
+  (identifier e))
 
 (defmacro defexpr*
   "Generalize `defmethod` for the cases in which we need to do
@@ -218,7 +226,7 @@
       :reserved-namespaced (-> children first :c first expr) ;; returns a :reserved-namespaced-raw
       :identifier-reserved-prefix (-> children first expr)
       :reserved (-> children first :c first expr) ;; returns a :reserved-raw
-      :identifier "TODO identifier"
+      :identifier (-> children first expr)
       :open-parens (-> children second expr))))
 
 (defmethod expr :record-type-or-literal [e]

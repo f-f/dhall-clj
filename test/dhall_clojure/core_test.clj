@@ -93,7 +93,13 @@
               'list/map)
    (Testcase. "List/map@1"
               (->Var "List/map" 1)
-              'list/map)
+              'list/map_1)
+   (Testcase. "foo"
+              (->Var "foo" 0)
+              'foo)
+   (Testcase. "foo@2"
+              (->Var "foo" 2)
+              'foo_2)
    (Testcase. "(1)"
               (->NaturalLit 1)
               1)
