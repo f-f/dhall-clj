@@ -58,6 +58,15 @@
    (Testcase. "[\"A\"]"
               (->ListLit nil [(->TextLit ["A"])])
               '("A"))
+   (Testcase. "[] : List Natural"
+              (->ListLit (->NaturalT) [])
+              [])
+   (Testcase. "[] : Optional Natural"
+              (->OptionalLit (->NaturalT) nil)
+              nil)
+   (Testcase. "[2] : Optional Natural"
+              (->OptionalLit (->NaturalT) (->NaturalLit 2))
+              2)
    (Testcase. "1 ? 2"
               (->ImportAlt (->NaturalLit 1) (->NaturalLit 2))
               1)

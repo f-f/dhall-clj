@@ -90,12 +90,23 @@
         children (:c e)]
     (case first-tag
       :merge "TODO merge"
-      :open-bracket "TODO open-bracket"
+      :open-bracket        (-> children second expr)
       :operator-expression (if (> (count children) 1)
                              (->Annot
                                (expr (first children))
                                (expr (nth children 2)))
                              (expr (first children))))))
+
+(defmethod expr :empty-collection [{:keys [c t]}]
+  (let [typ       (-> c last expr)]
+    (if (= :List (-> c (nth 2) :t))
+      (->ListLit     typ [])
+      (->OptionalLit typ nil))))
+
+(defmethod expr :non-empty-optional [{:keys [c t]}]
+  (let [typ   (-> c last  expr)
+        value (-> c first expr)]
+    (->OptionalLit typ value)))
 
 (defmethod expr :reserved-raw [e]
   (let [first-tag (-> e :c first :t)]
