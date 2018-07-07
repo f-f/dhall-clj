@@ -219,7 +219,7 @@
       :identifier-reserved-prefix (-> children first expr)
       :reserved (-> children first :c first expr) ;; returns a :reserved-raw
       :identifier "TODO identifier"
-      :open-parens "TODO open-parens")))
+      :open-parens (-> children second expr))))
 
 (defmethod expr :record-type-or-literal [e]
   (let [first-tag (-> e :c first :t)]
