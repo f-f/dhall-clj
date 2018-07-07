@@ -230,8 +230,21 @@
 (defexpr* :equal-expression         BoolEQ       :double-equal)
 (defexpr* :not-equal-expression     BoolNE       :not-equal)
 
-;; TODO: support `constructors`
-(defexpr* :application-expression App :whitespace-chunk)
+(defmethod expr :application-expression [{:keys [c t]}]
+  (if (> (count c) 1)
+    (let [exprs (remove #(= :whitespace-chunk (:t %)) c)
+          constructors? (= :constructors (-> c first :t))]
+      (loop [more (nnext exprs)
+             app (if constructors?
+                   (->Constructors (expr (second exprs)))
+                   (->BoolOr
+                     (expr (first exprs))
+                     (expr (second exprs))))]
+        (if (empty? more)
+          app
+          (recur (rest more)
+                 (->App app (expr (first more)))))))
+    (expr (-> c first))))
 
 (defmethod expr :import [e]
   e) ;; TODO

@@ -153,6 +153,12 @@
    (Testcase. "forall (x : a) -> b"
               (->Pi "x" (->Var "a" 0) (->Var "b" 0))
               nil) ;; TODO figure out the clj
+   (Testcase. "constructors < A : Bool >"
+              (->Constructors (->UnionT {"A" (->BoolT)}))
+              nil) ;; TODO figure out the clj
+   (Testcase. "constructors < A : Bool > 2"
+              (->App (->Constructors (->UnionT {"A" (->BoolT)})) (->NaturalLit 2))
+              nil) ;; TODO figure out the clj
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])
