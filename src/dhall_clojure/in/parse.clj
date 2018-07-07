@@ -74,30 +74,27 @@
 (defmethod expr :expression [{:keys [c t]}]
   (let [first-tag (-> c first :t)]
     (case first-tag
-      :lambda (->Lam
-                (expr (nth c 2))
-                (expr (nth c 4))
-                (expr (nth c 7)))
-      :if     (->BoolIf
-                (expr (nth c 1))
-                (expr (nth c 3))
-                (expr (nth c 5)))
+      :lambda (->Lam (expr (nth c 2))
+                     (expr (nth c 4))
+                     (expr (nth c 7)))
+      :if     (->BoolIf (expr (nth c 1))
+                        (expr (nth c 3))
+                        (expr (nth c 5)))
       :let    (if (> (count c) 6)
-                (->Let
-                  (expr (nth c 1))
-                  (expr (nth c 3))
-                  (expr (nth c 5))
-                  (expr (nth c 7)))
-                (->Let
-                  (expr (nth c 1))
-                  nil
-                  (expr (nth c 3))
-                  (expr (nth c 5))))
-      :forall (->Pi
-                (expr (nth c 2))
-                (expr (nth c 4))
-                (expr (nth c 7)))
-      :operator-expression "TODO operator expr" ;; FIXME: how does this work?
+                (->Let (expr (nth c 1))
+                       (expr (nth c 3))
+                       (expr (nth c 5))
+                       (expr (nth c 7)))
+                (->Let (expr (nth c 1))
+                       nil
+                       (expr (nth c 3))
+                       (expr (nth c 5))))
+      :forall (->Pi (expr (nth c 2))
+                    (expr (nth c 4))
+                    (expr (nth c 7)))
+      :operator-expression  (->Pi "_"
+                                  (expr (nth c 0))
+                                  (expr (nth c 2)))
       :annotated-expression (-> c first expr))))
 
 (defmethod expr :annotated-expression [{:keys [c t]}]

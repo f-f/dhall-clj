@@ -153,6 +153,9 @@
    (Testcase. "forall (x : a) -> b"
               (->Pi "x" (->Var "a" 0) (->Var "b" 0))
               nil) ;; TODO figure out the clj
+   (Testcase. "Text -> Natural"
+              (->Pi "_" (->TextT) (->NaturalT))
+              nil) ;; TODO figure out the clj
    (Testcase. "constructors < A : Bool >"
               (->Constructors (->UnionT {"A" (->BoolT)}))
               nil) ;; TODO figure out the clj
