@@ -215,19 +215,19 @@
   (let [first-tag (-> e :c first :t)
         children (:c e)]
     (case first-tag
-      :double-literal (-> children first compact read-string ->DoubleLit)
+      :double-literal  (-> children first compact read-string ->DoubleLit)
       :natural-literal (-> children first compact read-string ->NaturalLit)
       :integer-literal (-> children first compact read-string ->IntegerLit)
-      :text-literal (-> children first expr)
-      :open-brace (-> children second expr)
-      :open-angle (-> children second expr)
-      :non-empty-list-literal (-> children first expr)
+      :text-literal                          (-> children first expr)
+      :open-brace                            (-> children second expr)
+      :open-angle                            (-> children second expr)
+      :non-empty-list-literal                (-> children first expr)
       :identifier-reserved-namespaced-prefix (-> children first expr)
-      :reserved-namespaced (-> children first :c first expr)
-      :identifier-reserved-prefix (-> children first expr)
-      :reserved (-> children first :c first expr)
-      :identifier (-> children first expr)
-      :open-parens (-> children second expr))))
+      :reserved-namespaced                   (-> children first :c first expr)
+      :identifier-reserved-prefix            (-> children first expr)
+      :reserved                              (-> children first :c first expr)
+      :identifier                            (-> children first expr)
+      :open-parens                           (-> children second expr))))
 
 (defmethod expr :union-type-or-literal [e]
   (let [first-tag (-> e :c first :t)]
