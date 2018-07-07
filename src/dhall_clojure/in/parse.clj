@@ -87,17 +87,21 @@
       :operator-expression "TODO operator expr"
       :annotated-expression (-> c first expr))))
 
-(defmethod expr :annotated-expression [e]
-  (let [first-tag (-> e :c first :t)
-        children (:c e)]
+(defmethod expr :annotated-expression [{:keys [c t]}]
+  (let [first-tag (-> c first :t)]
     (case first-tag
-      :merge "TODO merge"
-      :open-bracket        (-> children second expr)
-      :operator-expression (if (> (count children) 1)
+      :merge               (->Merge
+                             (-> c (nth 1)     expr)
+                             (-> c (nth 2)     expr)
+                             (if (>= (count c) 5)
+                               (-> c (nth 4) expr)
+                               nil))
+      :open-bracket        (-> c second expr)
+      :operator-expression (if (> (count c) 1)
                              (->Annot
-                               (expr (first children))
-                               (expr (nth children 2)))
-                             (expr (first children))))))
+                               (expr (first c))
+                               (expr (nth c 2)))
+                             (expr (first c))))))
 
 (defmethod expr :empty-collection [{:keys [c t]}]
   (let [typ       (-> c last expr)]

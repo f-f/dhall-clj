@@ -132,6 +132,18 @@
    (Testcase. "λ(x : a) -> b"
               (->Lam "x" (->Var "a" 0) (->Var "b" 0))
               '(fn [x] b))
+   (Testcase. "merge { Left = Natural/even, Right = λ(b : Bool) → b } < Right = True | Left : Natural >"
+              (->Merge (->RecordLit {"Left" (->NaturalEven)
+                                     "Right" (->Lam "b" (->BoolT) (->Var "b" 0))})
+                       (->UnionLit "Right" (->BoolLit true) {"Left" (->NaturalT)})
+                       nil)
+              {}) ;; TODO figure out the clj
+   (Testcase. "merge { Left = Natural/even, Right = λ(b : Bool) → b } < Left = 3 | Right : Bool > : Bool"
+              (->Merge (->RecordLit {"Left" (->NaturalEven)
+                                     "Right" (->Lam "b" (->BoolT) (->Var "b" 0))})
+                       (->UnionLit "Left" (->NaturalLit 3) {"Right" (->BoolT)})
+                       (->BoolT))
+              {}) ;; TODO figure out the clj
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])
