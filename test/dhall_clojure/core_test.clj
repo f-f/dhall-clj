@@ -100,6 +100,23 @@
    (Testcase. "foo@2"
               (->Var "foo" 2)
               'foo_2)
+   (Testcase. "< Foo : Natural >"
+              (->UnionT {"Foo" (->NaturalT)})
+              {}) ;; TODO check this type
+   (Testcase. "< Foo = 3 >"
+              (->UnionLit "Foo" (->NaturalLit 3) {})
+              {:Foo 3})
+   (Testcase. "< Foo : Text | Bar = 3 | Baz : Bool >"
+              (->UnionLit "Bar" (->NaturalLit 3) {"Foo" (->TextT)
+                                                  "Baz" (->BoolT)})
+              {:Bar 3})
+   (Testcase. "< Foo = 2 | Bar : Bool >"
+              (->UnionLit "Foo" (->NaturalLit 2) {"Bar" (->BoolT)})
+              {:Foo 2})
+   (Testcase. "< Foo : Natural | Bar : Bool >"
+              (->UnionT {"Foo" (->NaturalT)
+                         "Bar" (->BoolT)})
+              {}) ;; TODO check this type
    (Testcase. "(1)"
               (->NaturalLit 1)
               1)

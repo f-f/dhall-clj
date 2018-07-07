@@ -220,14 +220,53 @@
       :integer-literal (-> children first compact read-string ->IntegerLit)
       :text-literal (-> children first expr)
       :open-brace (-> children second expr)
-      :open-angle "TODO open-angle"
+      :open-angle (-> children second expr)
       :non-empty-list-literal (-> children first expr)
       :identifier-reserved-namespaced-prefix (-> children first expr)
-      :reserved-namespaced (-> children first :c first expr) ;; returns a :reserved-namespaced-raw
+      :reserved-namespaced (-> children first :c first expr)
       :identifier-reserved-prefix (-> children first expr)
-      :reserved (-> children first :c first expr) ;; returns a :reserved-raw
+      :reserved (-> children first :c first expr)
       :identifier (-> children first expr)
       :open-parens (-> children second expr))))
+
+(defmethod expr :union-type-or-literal [e]
+  (let [first-tag (-> e :c first :t)]
+    (case first-tag
+      :non-empty-union-type-or-literal
+      (let [[k v kvs] (->> e :c first expr)]
+        (if (and k v) ;; if we actually have a value, we have a Union Literal
+          (->UnionLit k v kvs)
+          (->UnionT kvs)))
+      (->UnionT {})))) ;; Empty union type
+
+;; This should return a vector `[k v kvs]`,
+;; where `k` is the value key, `v` is its value,
+;; and `kvs` are the remaining types.
+;; `k` and `v` can be `nil`, and that means it's a Union type
+(defmethod expr :non-empty-union-type-or-literal [e]
+  (let [children (:c e)
+        label    (-> children first expr)
+        literal? (= :equal (-> children second :t))
+        value    (-> children (nth 2) expr)
+        more?    (> (count children) 3)]
+    (if literal?
+      ;; If we got our key:value here, we just
+      ;; merge into the kvs the remaining type
+      [label value (if more?
+                     (->> (-> e :c (nthrest 3))
+                        (partition 4)
+                        (mapv (fn [[bar label colon expr']]
+                                {(expr label)
+                                 (expr expr')}))
+                        (apply merge))
+                     {})]
+      ;; Otherwise our label:value is another type declaration,
+      ;; and we recur into the next types (if any), merging the
+      ;; current label:value into the next kvs
+      (if more?
+        (let [[k v kvs] (-> children (nth 4) expr)]
+          [k v (merge kvs {label value})])
+        [nil nil {label value}]))))
 
 (defmethod expr :record-type-or-literal [e]
   (let [first-tag (-> e :c first :t)]
