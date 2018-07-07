@@ -91,6 +91,9 @@
    (Testcase. "List/map"
               (->Var "List/map" 0)
               'list/map)
+   (Testcase. "List/map@1"
+              (->Var "List/map" 1)
+              'list/map)
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])

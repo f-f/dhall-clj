@@ -135,27 +135,32 @@
       :Optional-fold-raw     (->OptionalFold)
       :Optional-build-raw    (->OptionalBuild))))
 
-(defmethod expr :identifier-reserved-namespaced-prefix [e]
+(defn identifier-with-reserved-prefix [e]
   (let [children (:c e)
+        ;; the prefix is the reserved word
         prefix (->> children first :c first :c (apply str))
-        label (->> children rest
-                   (mapv (fn [ch]
-                           (if (string? ch)
-                             ch
-                             (-> ch :c first))))
-                   (apply str))]
-    (->Var (str prefix label) 0))) ;; TODO: is i always 0?
-
-(defmethod expr :identifier-reserved-prefix [e]
-  (let [children (:c e)
-        prefix (->> children first :c first :c (apply str))
-        label (->> children rest
+        ;; at the end of `children` there might be a DeBrujin index
+        maybe-index (-> children butlast last)
+        index? (= :whitespace (:t maybe-index))
+        index (if index?
+                0    ;; TODO: is i always 0?
+                (-> maybe-index :c first :c first read-string))
+        ;; the label is the rest of the chars
+        label (->> children
+                 rest
+                 (drop-last (if index? 2 4))
                  (mapv (fn [ch]
                          (if (string? ch)
                            ch
                            (-> ch :c first))))
                  (apply str))]
-    (->Var (str prefix label) 0))) ;; TODO: is i always 0?
+    (->Var (str prefix label) index)))
+
+(defmethod expr :identifier-reserved-namespaced-prefix [e]
+  (identifier-with-reserved-prefix e))
+
+(defmethod expr :identifier-reserved-prefix [e]
+  (identifier-with-reserved-prefix e))
 
 (defmacro defexpr*
   "Generalize `defmethod` for the cases in which we need to do
