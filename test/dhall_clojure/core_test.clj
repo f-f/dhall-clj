@@ -159,6 +159,15 @@
    (Testcase. "constructors < A : Bool > 2"
               (->App (->Constructors (->UnionT {"A" (->BoolT)})) (->NaturalLit 2))
               nil) ;; TODO figure out the clj
+   (Testcase. "foo.a"
+              (->Field (->Var "foo" 0) "a")
+              '(:a foo))
+   (Testcase. "foo.{ a, b }"
+              (->Project (->Var "foo" 0) ["a" "b"])
+              '(select-keys foo [:a :b]))
+   (Testcase. "foo.{a,b}.c"
+              (->Field (->Project (->Var "foo" 0) ["a" "b"]) "c")
+              '(:c (select-keys foo [:a :b])))
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])

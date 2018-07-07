@@ -251,8 +251,30 @@
 
 (defmethod expr :selector-expression [e]
   (if (children? e)
-    "TODO handle accessor fields"
-    (first-child-expr e))) ;; Otherwise we go to the primitive expression
+    (let [exprs (remove #(= :dot (:t %)) (:c e))
+          base  (expr (first exprs))
+          labels? (fn [l] (= :labels (:t l)))]
+      (loop [more (nnext exprs)
+             sel ((if (labels? (second exprs))
+                    ->Project
+                    ->Field)
+                  base
+                  (expr (second exprs)))]
+        (if (empty? more)
+          sel
+          (recur (rest more)
+                 ((if (labels? (first more))
+                    ->Project
+                    ->Field)
+                  sel
+                  (expr (first more)))))))
+    (-> e :c first expr))) ;; Otherwise we go to the primitive expression
+
+(defmethod expr :labels [{:keys [c t]}]
+  (->> c
+     rest
+     (take-nth 2)
+     (mapv expr)))
 
 (defmethod expr :primitive-expression [e]
   (let [first-tag (-> e :c first :t)
