@@ -71,19 +71,21 @@
 ;;
 ;; Useful rules start here
 ;;
-(defmethod expr :expression [e]
-  (let [first-tag (-> e :c first :t)
-        children (:c e)]
+(defmethod expr :expression [{:keys [c t]}]
+  (let [first-tag (-> c first :t)]
     (case first-tag
-      :lambda "TODO lambda"
-      :if (->BoolIf
-            (expr (nth children 1))
-            (expr (nth children 3))
-            (expr (nth children 5)))
+      :lambda               (->Lam
+                              (expr (nth c 2))
+                              (expr (nth c 4))
+                              (expr (nth c 7)))
+      :if                   (->BoolIf
+                              (expr (nth c 1))
+                              (expr (nth c 3))
+                              (expr (nth c 5)))
       :let "TODO let"
       :forall "TODO forall"
       :operator-expression "TODO operator expr"
-      :annotated-expression (expr (first children)))))
+      :annotated-expression (-> c first expr))))
 
 (defmethod expr :annotated-expression [e]
   (let [first-tag (-> e :c first :t)

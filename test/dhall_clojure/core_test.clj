@@ -129,6 +129,9 @@
    (Testcase. "(1)"
               (->NaturalLit 1)
               1)
+   (Testcase. "λ(x : a) -> b"
+              (->Lam "x" (->Var "a" 0) (->Var "b" 0))
+              '(fn [x] b))
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))])
