@@ -149,11 +149,7 @@
         label (->> children
                  rest
                  (drop-last (if index? 2 4))
-                 (mapv (fn [ch]
-                         (if (string? ch)
-                           ch
-                           (-> ch :c first))))
-                 (apply str))]
+                 compact)]
     (->Var (str prefix label) index)))
 
 (defmethod expr :identifier-reserved-namespaced-prefix [e]
