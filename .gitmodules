@@ -4,6 +4,3 @@
 [submodule "dhall-haskell"]
 	path = dhall-haskell
 	url = git@github.com:dhall-lang/dhall-haskell.git
-[submodule "instaparse"]
-	path = instaparse
-	url = git@github.com:f-f/instaparse.git
