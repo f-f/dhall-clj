@@ -174,7 +174,7 @@
         index? (= :natural-raw (:t maybe-index))
         index (if index?
                 (-> maybe-index :c first :c first read-string)
-                0)    ;; TODO: is i always 0?
+                0)
         ;; the label is the rest of the chars
         ;; if it's an identifier without prefix this is going to
         ;; be an empty string, so all good
