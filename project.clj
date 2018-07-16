@@ -7,6 +7,7 @@
                  [org.clojure/spec.alpha "0.1.143"]
                  [org.clojure/tools.reader "1.0.3"]
                  [org.clojure/core.match "0.3.0-alpha5"]
+                 [medley "1.0.0"]
                  ^{:voom {:repo "https://github.com/f-f/instaparse" :branch "master"}}
                  [instaparse "1.4.8-20180320_231130-g3f0ce6d"]]
   :plugins [[lein-shell "0.5.0"]
