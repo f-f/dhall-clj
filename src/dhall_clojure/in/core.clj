@@ -14,6 +14,9 @@
     `diff` is always +1 or -1, because we either:
     * increment variables by `1` to avoid variable capture during substitution
     * decrement variables by `1` when deleting lambdas after substitution")
+  (subst [this var e]
+    "Substitute all occurrences of a variable with an expression
+    E.g. (subst this var e)  ~  this[var := e]")
 ;;  (alphaNormalize [this]
 ;;    "α-normalize an expression by renaming all variables to `_` and using
 ;;    De Bruijn indices to distinguish them")
@@ -45,6 +48,7 @@
 (defrecord Const [c]
   Expr
   (shift [this diff var] this)
+  (subst [this var e] this)
   (typecheck [this] "TODO typecheck Const"))
 
 
@@ -57,6 +61,10 @@
                 (+ i' diff)
                 i')]
       (assoc this :i i'')))
+  (subst [this var e]
+    (if (= this var)
+      e
+      this))
   (typecheck [this] "TODO typecheck Var"))
 
 
@@ -69,6 +77,14 @@
           type' (shift type diff var)
           body' (shift body diff (->Var x i'))]
       (->Lam arg type' body')))
+  (subst [this {:keys [x i] :as var} e]
+    (let [y (:arg this)
+          i' (if (= x y)
+               (inc i)
+               i)]
+      (-> this
+         (update :type subst var e)
+         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
   (typecheck [this] "TODO typecheck Lam"))
 
 
@@ -81,6 +97,14 @@
              type' (shift type diff var)
              body' (shift body diff (->Var x i'))]
          (->Pi arg type' body')))
+  (subst [this {:keys [x i] :as var} e]
+    (let [y (:arg this)
+          i' (if (= x y)
+               (inc i)
+               i)]
+      (-> this
+         (update :type subst var e)
+         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
   (typecheck [this] "TODO typecheck Lam"))
 
 
@@ -89,6 +113,10 @@
   (shift [{:keys [a b]} diff var]
     (->App (shift a diff var)
            (shift b diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck App"))
 
 
@@ -102,6 +130,17 @@
           body'  (shift body diff var)
           next'  (shift next diff (->Var x i'))]
       (->Let label type?' body' next')))
+  (subst [this {:keys [x i] :as var} e]
+    (let [y  (:label this)
+          i' (if (= x y)
+               (inc i)
+               i)
+          type?  (:type? this)
+          type?' (when type? (subst type? var e))]
+      (-> this
+         (assoc  :type? type?')
+         (update :body subst var e)
+         (update :next subst (->Var x i') (shift e 1 (->Var y 0))))))
   (typecheck [this] "TODO typecheck Let"))
 
 
@@ -110,12 +149,17 @@
   (shift [{:keys [val type]} diff var]
     (->Annot (shift val diff var)
              (shift type diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck Annot"))
 
 
 (defrecord BoolT []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Const :type)))
 
@@ -123,6 +167,7 @@
 (defrecord BoolLit [b]
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->BoolT)))
 
@@ -133,6 +178,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck BoolAnd"))
 
 
@@ -142,6 +191,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck BoolOr"))
 
 
@@ -151,6 +204,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck BoolEQ"))
 
 
@@ -160,6 +217,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck BoolNE"))
 
 
@@ -170,12 +231,18 @@
        (update :test shift diff var)
        (update :then shift diff var)
        (update :else shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :test subst var e)
+       (update :then subst var e)
+       (update :else subst var e)))
   (typecheck [this] "TODO typecheck BoolIf"))
 
 
 (defrecord NaturalT []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Const :type)))
 
@@ -183,6 +250,7 @@
 (defrecord NaturalLit [n]
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->NaturalT)))
 
@@ -190,18 +258,21 @@
 (defrecord NaturalFold []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this] "TODO typecheck NaturalFold"))
 
 
 (defrecord NaturalBuild []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this] "TODO typecheck NaturalBuild"))
 
 
 (defrecord NaturalIsZero []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT))))
 
@@ -209,6 +280,7 @@
 (defrecord NaturalEven []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT))))
 
@@ -216,6 +288,7 @@
 (defrecord NaturalOdd []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT))))
 
@@ -223,6 +296,7 @@
 (defrecord NaturalToInteger []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->IntegerT))))
 
@@ -230,6 +304,7 @@
 (defrecord NaturalShow []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->TextT))))
 
@@ -240,6 +315,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck NaturalPlus"))
 
 
@@ -249,12 +328,17 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck NaturalTimes"))
 
 
 (defrecord IntegerT []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Const :type)))
 
@@ -262,6 +346,7 @@
 (defrecord IntegerLit [n]
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->IntegerT)))
 
@@ -269,6 +354,7 @@
 (defrecord IntegerShow []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->IntegerT) (->TextT))))
 
@@ -276,6 +362,7 @@
 (defrecord IntegerToDouble []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->IntegerT) (->DoubleT))))
 
@@ -283,6 +370,7 @@
 (defrecord DoubleT []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Const :type)))
 
@@ -290,6 +378,7 @@
 (defrecord DoubleLit [n]
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->DoubleT)))
 
@@ -297,6 +386,7 @@
 (defrecord DoubleShow []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->DoubleT) (->TextT))))
 
@@ -304,6 +394,7 @@
 (defrecord TextT []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Const :type)))
 
@@ -316,6 +407,12 @@
                          c
                          (shift c diff var)))]
       (update this :chunks #(map shift-text %))))
+  (subst [this var e]
+    (let [subst-text (fn [c]
+                       (if (string? c)
+                         c
+                         (subst c var e)))]
+      (update this :chunks #(map subst-text %))))
   (typecheck [this] "TODO typecheck TextLit"))
 
 
@@ -325,12 +422,17 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck TextAppend"))
 
 
 (defrecord ListT []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->Const :type) (->Const :type))))
 
@@ -344,6 +446,13 @@
       (-> this
          (assoc :type? type?')
          (assoc :exprs exprs'))))
+  (subst [this var e]
+    (let [type?  (:type? this)
+          type?' (when type? (subst type? var e))
+          exprs' (mapv #(subst % var e) exprs)]
+      (-> this
+         (assoc :type? type?')
+         (assoc :exprs exprs'))))
   (typecheck [this] "TODO typecheck ListLit"))
 
 
@@ -353,24 +462,31 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck ListAppend"))
 
 
 (defrecord ListBuild []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this] "TODO typecheck ListBuild"))
 
 
 (defrecord ListFold []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this] "TODO typecheck ListFold"))
 
 
 (defrecord ListLength []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -380,6 +496,7 @@
 (defrecord ListHead []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -391,6 +508,7 @@
 (defrecord ListLast []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -402,12 +520,14 @@
 (defrecord ListIndexed []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this] "TODO typecheck ListIndexed"))
 
 
 (defrecord ListReverse []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -419,6 +539,7 @@
 (defrecord OptionalT []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this]
     (->Pi "_" (->Const :type) (->Const :type))))
 
@@ -431,18 +552,26 @@
       (-> this
          (update :type shift diff var)
          (assoc :val? val?'))))
+  (subst [this var e]
+    (let [val?  (:val? this)
+          val?' (when val? (subst val? var e))]
+      (-> this
+         (update :type subst var e)
+         (assoc :val? val?'))))
   (typecheck [this] "TODO typecheck OptionalLit"))
 
 
 (defrecord OptionalFold []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this] "TODO typecheck OptionalFold"))
 
 
 (defrecord OptionalBuild []
   Expr
   (shift [this diff var] this)
+  (subst [this var e]    this)
   (typecheck [this] "TODO typecheck OptionalBuild"))
 
 
@@ -450,6 +579,8 @@
   Expr
   (shift [this diff var]
     (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
+  (subst [this var e]
+    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (typecheck [this] "TODO typecheck RecordT"))
 
 
@@ -457,6 +588,8 @@
   Expr
   (shift [this diff var]
     (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
+  (subst [this var e]
+    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (typecheck [this] "TODO typecheck RecordLit"))
 
 
@@ -464,6 +597,8 @@
   Expr
   (shift [this diff var]
     (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
+  (subst [this var e]
+    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (typecheck [this] "TODO typecheck UnionT"))
 
 
@@ -473,6 +608,10 @@
     (-> this
        (update :v shift diff var)
        (update :kvs (fn [kvs] (map-vals #(shift % diff var) kvs)))))
+  (subst [this var e]
+    (-> this
+       (update :v subst var e)
+       (update :kvs (fn [kvs] (map-vals #(subst % var e) kvs)))))
   (typecheck [this] "TODO typecheck UnionLit"))
 
 
@@ -482,6 +621,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck Combine"))
 
 
@@ -491,6 +634,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck CombineTypes"))
 
 
@@ -500,6 +647,10 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck Prefer"))
 
 
@@ -512,6 +663,13 @@
          (update :a shift diff var)
          (update :b shift diff var)
          (assoc :type? type?'))))
+  (subst [this var e]
+    (let [type?  (:type? this)
+          type?' (when type? (subst type? var e))]
+      (-> this
+         (update :a subst var e)
+         (update :b subst var e)
+         (assoc :type? type?'))))
   (typecheck [this] "TODO typecheck Merge"))
 
 
@@ -519,6 +677,8 @@
   Expr
   (shift [this diff var]
     (update this :e shift diff var))
+  (subst [this var e]
+    (update this :e subst var e))
   (typecheck [this] "TODO typecheck Constructors"))
 
 
@@ -526,6 +686,8 @@
   Expr
   (shift [this diff var]
     (update this :e shift diff var))
+  (subst [this var e]
+    (update this :e subst var e))
   (typecheck [this] "TODO typecheck Field"))
 
 
@@ -533,6 +695,8 @@
   Expr
   (shift [this diff var]
     (update this :e shift diff var))
+  (subst [this var e]
+    (update this :e subst var e))
   (typecheck [this] "TODO typecheck Project"))
 
 
@@ -542,4 +706,8 @@
     (-> this
        (update :a shift diff var)
        (update :b shift diff var)))
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
   (typecheck [this] "TODO typecheck ImportAlt"))
