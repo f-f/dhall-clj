@@ -178,12 +178,43 @@
              normalize))
         (let [a' (normalize a)]
           (cond
-            ;; TODO build/fold fusion for List/Natural/Optional
-            ;; TODO App (App (App (App NaturalFold (NaturalLit n0)) t) succ') zero
+            ;; build/fold fusion for List
+            (and (instance? App f')
+                 (instance? ListBuild (:a f'))
+                 (instance? App a')
+                 (instance? App (:a a'))
+                 (instance? ListFold (:a (:a a')))) (normalize (:b a'))
+            ;; build/fold fusion for Natural
+            (and (instance? NaturalBuild f')
+                 (instance? App a')
+                 (instance? NaturalFold (:a a'))) (normalize (:b a'))
+            ;; build/fold fusion for Optional
+            (and (instance? App f')
+                 (instance? OptionalBuild (:a f'))
+                 (instance? App a')
+                 (instance? App (:a a'))
+                 (instance? OptionalFold (:a (:a a')))) (normalize (:b a'))
+
+            (and (instance? App         f')
+                 (instance? App         (:a f'))
+                 (instance? App         (:a (:a f')))
+                 (instance? NaturalFold (:a (:a (:a f'))))
+                 (instance? NaturalLit  (:b (:a (:a f')))))
+            (let [zero  a'
+                  succ' (:b f')
+                  t     (:b (:a f'))
+                  n0    (:n (:b (:a (:a f'))))
+                  _ (declare go)
+                  go (fn [n]
+                       (if (zero? n)
+                         (normalize zero)
+                         (normalize (->App succ' (go (dec n))))))]
+              (go n0))
+
             (instance? NaturalBuild f') (let [zero (->NaturalLit 0)
                                               succ (->Lam "x"
                                                           (->NaturalT)
-                                                          (->NaturalPlus "x" (->NaturalLit 1)))]
+                                                          (->NaturalPlus (->Var "x" 0) (->NaturalLit 1)))]
                                           (->App (->App (->App a' (->NaturalT) succ) zero)))
             (and (instance? NaturalLit a')
                  (instance? NaturalIsZero f'))    (->BoolLit (= 0 (:n a')))
@@ -231,7 +262,21 @@
                                                  (normalize (->App (->App (->App a' _list)
                                                                           _cons)
                                                                    _nil))))
-            ;; TODO: App (App (App (App (App ListFold _) (ListLit _ xs)) t) cons) nil
+
+            (and (instance? App      f')
+                 (instance? App      (:a f'))
+                 (instance? App      (:a (:a f')))
+                 (instance? App      (:a (:a (:a f'))))
+                 (instance? ListFold (:a (:a (:a (:a f')))))
+                 (instance? ListLit  (:b (:a (:a f')))))
+            (let [_nil  a'
+                  _cons (:b f')
+                  t     (:b (:a f'))
+                  xs    (:exprs (:b (:a (:a f'))))
+                  fold  (fn [y ys]
+                          (normalize (->App (->App _cons y) ys)))]
+              (reduce fold (normalize _nil) xs))
+
             (and (instance? App f')
                  (instance? ListLength (:a f'))
                  (instance? ListLit a'))        (->NaturalLit (count (:exprs a')))
@@ -260,7 +305,20 @@
                                                        typ? (when (empty? xs)
                                                               (:b f'))]
                                                    (normalize (->ListLit typ? (reverse xs))))
-            ;; TODO App (App (App (App (App OptionalFold _) (OptionalLit _ xs)) _) just) nothing
+
+            (and (instance? App          f')
+                 (instance? App          (:a f'))
+                 (instance? App          (:a (:a f')))
+                 (instance? App          (:a (:a (:a f'))))
+                 (instance? OptionalFold (:a (:a (:a (:a f')))))
+                 (instance? OptionalLit  (:b (:a (:a f')))))
+            (let [nothing  a'
+                  just     (:b f')
+                  val?     (:val? (:b (:a (:a f'))))]
+              (normalize (if val?
+                           (->App just val?)
+                           nothing)))
+
             :else (->App f' a'))))))
   (typecheck [this] "TODO typecheck App"))
 
