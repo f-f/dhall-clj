@@ -165,16 +165,103 @@
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b] :as this}]
-    (let [normF (normalize a)]
-      (if (instance? Lam normF)
-        (let [{:keys [arg type body]} normF
-              b' (shift b 1 (->Var arg 0))]
+  (normalize [this]
+    (let [f  (:a this)
+          a  (:b this)
+          f' (normalize f)]
+      (if (instance? Lam f')
+        (let [{:keys [arg type body]} f'
+              a' (shift a 1 (->Var arg 0))]
           (-> body
-             (subst (->Var arg 0) b')
+             (subst (->Var arg 0) a')
              (shift -1 (->Var arg 0))
              normalize))
-        "TODO here we assume it's a Lam, but we should cover everything")))
+        (let [a' (normalize a)]
+          (cond
+            ;; TODO build/fold fusion for List/Natural/Optional
+            ;; TODO App (App (App (App NaturalFold (NaturalLit n0)) t) succ') zero
+            (instance? NaturalBuild f') (let [zero (->NaturalLit 0)
+                                              succ (->Lam "x"
+                                                          (->NaturalT)
+                                                          (->NaturalPlus "x" (->NaturalLit 1)))]
+                                          (->App (->App (->App a' (->NaturalT) succ) zero)))
+            (and (instance? NaturalLit a')
+                 (instance? NaturalIsZero f'))    (->BoolLit (= 0 (:n a')))
+            (and (instance? NaturalLit a')
+                 (instance? NaturalEven f'))      (->BoolLit (even? (:n a')))
+            (and (instance? NaturalLit a')
+                 (instance? NaturalOdd f'))       (->BoolLit (odd? (:n a')))
+            (and (instance? NaturalLit a')
+                 (instance? NaturalToInteger f')) (->IntegerLit (:n a'))
+            (and (instance? NaturalLit a')
+                 (instance? NaturalShow f'))      (->TextLit [(str (:n a'))])
+            (and (instance? IntegerLit a')
+                 (instance? IntegerShow f'))      (->TextLit [(let [n (:n a')]
+                                                                (str (when (>= n 0) "+") n))])
+            (and (instance? IntegerLit a')
+                 (instance? IntegerToDouble f'))  (->DoubleLit (double (:n a')))
+            (and (instance? DoubleLit a')
+                 (instance? DoubleShow f'))       (->TextLit [(str (:n a'))])
+            (and (instance? App f')
+                 (instance? OptionalBuild (:a f')) (let [typ  (:a f')
+                                                         typ' (shift typ 1 (->Var "a" 0))
+                                                         optional (->App (->OptionalT) typ)
+                                                         just     (->Lam "a"
+                                                                         typ
+                                                                         (->OptionalLit typ'
+                                                                                        (->Var "a" 0)))
+                                                         nothing  (->OptionalLit typ nil)]
+                                                     (normalize (->App (->App (->App a' optional)
+                                                                              just)
+                                                                       nothing))))
+            (and (instance? App f')
+                 (instance? ListBuild (:a f')) (let [typ  (:a f')
+                                                     typ' (shift typ 1 (->Var "a" 0))
+                                                     _list (->App (->ListT) typ)
+                                                     _cons (->Lam
+                                                             "a"
+                                                             typ
+                                                             (->Lam
+                                                               "as"
+                                                               (->App (->ListT) typ')
+                                                               (->ListAppend
+                                                                 (->ListLit nil [(->Var "a" 0)])
+                                                                 (->Var "as" 0))))
+                                                     _nil  (->ListLit typ [])]
+                                                 (normalize (->App (->App (->App a' _list)
+                                                                          _cons)
+                                                                   _nil))))
+            ;; TODO: App (App (App (App (App ListFold _) (ListLit _ xs)) t) cons) nil
+            (and (instance? App f')
+                 (instance? ListLength (:a f'))
+                 (instance? ListLit a'))        (->NaturalLit (count (:exprs a')))
+            (and (instance? App f')
+                 (instance? ListHead (:a f'))
+                 (instance? ListLit a'))      (normalize (->OptionalLit (:b f') (first (:exprs a'))))
+            (and (instance? App f')
+                 (instance? ListLast (:a f'))
+                 (instance? ListLit a'))      (normalize (->OptionalLit (:b f') (last (:exprs a'))))
+            (and (instance? App f')
+                 (instance? ListIndexed (:a f'))
+                 (instance? ListLit a'))         (let [t2 (->RecordT {"index" (->NaturalT)
+                                                                      "value" (:b f')})
+                                                       xs (:exprs a')
+                                                       typ? (when (empty? xs)
+                                                                  t2)
+                                                       adapt (fn [i el]
+                                                               (->RecordLit
+                                                                 {"index" (->NaturalLit i)
+                                                                  "value" el}))
+                                                       xs' (map-indexed adapt xs)]
+                                                   (normalize (->ListLit typ? xs')))
+            (and (instance? App f')
+                 (instance? ListReverse (:a f'))
+                 (instance? ListLit a'))         (let [xs   (:exprs a')
+                                                       typ? (when (empty? xs)
+                                                              (:b f'))]
+                                                   (normalize (->ListLit typ? (reverse xs))))
+            ;; TODO App (App (App (App (App OptionalFold _) (OptionalLit _ xs)) _) just) nothing
+            :else (->App f' a'))))))
   (typecheck [this] "TODO typecheck App"))
 
 
