@@ -281,7 +281,7 @@
                                               succ (->Lam "x"
                                                           (->NaturalT)
                                                           (->NaturalPlus (->Var "x" 0) (->NaturalLit 1)))]
-                                          (->App (->App (->App a' (->NaturalT) succ) zero)))
+                                          (->App (->App (->App a' (->NaturalT)) succ) zero))
             (and (instance? NaturalLit a')
                  (instance? NaturalIsZero f'))    (->BoolLit (= 0 (:n a')))
             (and (instance? NaturalLit a')
@@ -1161,16 +1161,15 @@
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
   (normalize [{:keys [a b]}]
-    (let [_ (declare decide)
-          decide (fn [l r]
-                   (cond
-                     (and (instance? RecordLit l)
-                          (empty? l))              r
-                     (and (instance? RecordLit r)
-                          (empty? r))              l
-                     (and (instance? RecordLit l)
-                          (instance? RecordLit r)) (->RecordLit (merge-with decide (:kvs l) (:kvs r)))
-                     :else                         (->Combine l r)))]
+    (letfn [(decide [l r]
+              (cond
+                (and (instance? RecordLit l)
+                     (empty? l))              r
+                (and (instance? RecordLit r)
+                     (empty? r))              l
+                (and (instance? RecordLit l)
+                     (instance? RecordLit r)) (->RecordLit (merge-with decide (:kvs l) (:kvs r)))
+                :else                         (->Combine l r)))]
       (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck Combine")
 
@@ -1190,16 +1189,15 @@
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
   (normalize [{:keys [a b]}]
-    (let [_ (declare decide)
-          decide (fn [l r]
-                   (cond
-                     (and (instance? RecordT l)
-                          (empty? l))            r
-                     (and (instance? RecordT r)
-                          (empty? r))            l
-                     (and (instance? RecordT l)
-                          (instance? RecordT r)) (->RecordT (merge-with decide (:kvs l) (:kvs r)))
-                     :else                       (->CombineTypes l r)))]
+    (letfn [(decide [l r]
+              (cond
+                (and (instance? RecordT l)
+                     (empty? l))            r
+                (and (instance? RecordT r)
+                     (empty? r))            l
+                (and (instance? RecordT l)
+                     (instance? RecordT r)) (->RecordT (merge-with decide (:kvs l) (:kvs r)))
+                :else                       (->CombineTypes l r)))]
       (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck CombineTypes")
 
@@ -1219,16 +1217,15 @@
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
   (normalize [{:keys [a b]}]
-    (let [_ (declare decide)
-          decide (fn [l r]
-                   (cond
-                     (and (instance? RecordLit l)
-                          (empty? l))              r
-                     (and (instance? RecordLit r)
-                          (empty? r))              l
-                     (and (instance? RecordLit l)
-                          (instance? RecordLit r)) (->RecordLit (merge (:kvs l) (:kvs r)))
-                     :else                         (->Prefer l r)))]
+    (letfn [(decide [l r]
+              (cond
+                (and (instance? RecordLit l)
+                     (empty? l))              r
+                (and (instance? RecordLit r)
+                     (empty? r))              l
+                (and (instance? RecordLit l)
+                     (instance? RecordLit r)) (->RecordLit (merge (:kvs l) (:kvs r)))
+                :else                         (->Prefer l r)))]
       (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck Prefer")
 
