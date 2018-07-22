@@ -43,11 +43,71 @@
 ;;     keeping type safety. Here we just hope we have enough tests :)
 
 
-(declare
-  ->IntegerT
-  ->TextT
-  ->DoubleT
-  ->OptionalT)
+(defrecord Const [c])
+(defrecord Var [var i])
+(defrecord Lam [arg type body])
+(defrecord Pi [arg type body])
+(defrecord App [a b])
+(defrecord Let [label type? body next])
+(defrecord Annot [val type])
+(defrecord BoolT [])
+(defrecord BoolLit [b])
+(defrecord BoolAnd [a b])
+(defrecord BoolOr [a b])
+(defrecord BoolEQ [a b])
+(defrecord BoolNE [a b])
+(defrecord BoolIf [test then else])
+(defrecord NaturalT [])
+(defrecord NaturalLit [n])
+(defrecord NaturalFold [])
+(defrecord NaturalBuild [])
+(defrecord NaturalIsZero [])
+(defrecord NaturalEven [])
+(defrecord NaturalOdd [])
+(defrecord NaturalToInteger [])
+(defrecord NaturalShow [])
+(defrecord NaturalPlus [a b])
+(defrecord NaturalTimes [a b])
+(defrecord IntegerT [])
+(defrecord IntegerLit [n])
+(defrecord IntegerShow [])
+(defrecord IntegerToDouble [])
+(defrecord DoubleT [])
+(defrecord DoubleLit [n])
+(defrecord DoubleShow [])
+(defrecord TextT [])
+(defrecord TextLit [chunks])
+(defrecord TextAppend [a b])
+(defrecord ListT [])
+(defrecord ListLit [type? exprs])
+(defrecord ListAppend [a b])
+(defrecord ListBuild [])
+(defrecord ListFold [])
+(defrecord ListLength [])
+(defrecord ListHead [])
+(defrecord ListLast [])
+(defrecord ListIndexed [])
+(defrecord ListReverse [])
+(defrecord OptionalT [])
+(defrecord OptionalLit [type val?])
+(defrecord OptionalFold [])
+(defrecord OptionalBuild [])
+(defrecord RecordT [kvs])
+(defrecord RecordLit [kvs])
+(defrecord UnionT [kvs])
+(defrecord UnionLit [k v kvs])
+(defrecord Combine [a b])
+(defrecord CombineTypes [a b])
+(defrecord Prefer [a b])
+(defrecord Merge [a b type?])
+(defrecord Constructors [e])
+(defrecord Field [e k])
+(defrecord Project [e ks])
+(defrecord ImportAlt [l r])
+
+
+
+;; Implementation of Expr interface
 
 
 (defn judgmentallyEqual
@@ -58,18 +118,24 @@
     (= (alphaBetaNormalize a)
        (alphaBetaNormalize b))))
 
+(defn map-chunks [this f]
+  (update this :chunks #(map (fn [el] (if (string? el) el (f el))) %)))
 
-(defrecord Const [c]
-  Expr
+
+
+
+(extend-protocol Expr
+
+  Const
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this] "TODO typecheck Const"))
+  (typecheck [this] "TODO typecheck Const")
 
 
-(defrecord Var [x i]
-  Expr
+
+  Var
   (shift [this diff {:keys [x i] :as var}]
     (let [x'  (:x this)
           i'  (:i this)
@@ -83,11 +149,11 @@
       this))
   (alphaNormalize [this] this)
   (normalize [this] this)
-  (typecheck [this] "TODO typecheck Var"))
+  (typecheck [this] "TODO typecheck Var")
 
 
-(defrecord Lam [arg type body]
-  Expr
+
+  Lam
   (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
     (let [i' (if (= x arg)
                (inc i)
@@ -116,11 +182,11 @@
     (-> this
        (update :type normalize)
        (update :body normalize)))
-  (typecheck [this] "TODO typecheck Lam"))
+  (typecheck [this] "TODO typecheck Lam")
 
 
-(defrecord Pi [arg type body]
-  Expr
+
+  Pi
   (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
        (let [i' (if (= x arg)
                   (inc i)
@@ -149,11 +215,11 @@
     (-> this
        (update :type normalize)
        (update :body normalize)))
-  (typecheck [this] "TODO typecheck Lam"))
+  (typecheck [this] "TODO typecheck Lam")
 
 
-(defrecord App [a b]
-  Expr
+
+  App
   (shift [{:keys [a b]} diff var]
     (->App (shift a diff var)
            (shift b diff var)))
@@ -320,11 +386,11 @@
                            nothing)))
 
             :else (->App f' a'))))))
-  (typecheck [this] "TODO typecheck App"))
+  (typecheck [this] "TODO typecheck App")
 
 
-(defrecord Let [label type? body next]
-  Expr
+
+  Let
   (shift [{:keys [label type? body next]} diff {:keys [x i] :as var}]
     (let [i' (if (= x label)
                (inc i)
@@ -361,11 +427,11 @@
       (normalize (-> next
                     (subst var body')
                     (shift -1 var)))))
-  (typecheck [this] "TODO typecheck Let"))
+  (typecheck [this] "TODO typecheck Let")
 
 
-(defrecord Annot [val type]
-  Expr
+
+  Annot
   (shift [this diff var]
     (-> this
        (update :val  shift diff var)
@@ -380,30 +446,29 @@
        (update :type alphaNormalize)))
   (normalize [this]
     (normalize (:val this)))
-  (typecheck [this] "TODO typecheck Annot"))
+  (typecheck [this] "TODO typecheck Annot")
 
 
-(defrecord BoolT []
-  Expr
+  BoolT
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Const :type)))
+    (->Const :type))
 
 
-(defrecord BoolLit [b]
-  Expr
+
+  BoolLit
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this]      (->BoolT)))
+  (typecheck [this]      (->BoolT))
 
 
-(defrecord BoolAnd [a b]
-  Expr
+
+  BoolAnd
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -430,11 +495,11 @@
                          l
                          (->BoolAnd l r)))))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck BoolAnd"))
+  (typecheck [this] "TODO typecheck BoolAnd")
 
 
-(defrecord BoolOr [a b]
-  Expr
+
+  BoolOr
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -461,11 +526,11 @@
                          l
                          (->BoolAnd l r)))))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck BoolOr"))
+  (typecheck [this] "TODO typecheck BoolOr")
 
 
-(defrecord BoolEQ [a b]
-  Expr
+
+  BoolEQ
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -486,11 +551,11 @@
                      (judgmentallyEqual l r)            (->BoolLit true)
                      :else                              (->BoolEQ l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck BoolEQ"))
+  (typecheck [this] "TODO typecheck BoolEQ")
 
 
-(defrecord BoolNE [a b]
-  Expr
+
+  BoolNE
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -511,11 +576,11 @@
                      (judgmentallyEqual l r)                  (->BoolLit false)
                      :else                                    (->BoolNE l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck BoolNE"))
+  (typecheck [this] "TODO typecheck BoolNE")
 
 
-(defrecord BoolIf [test then else]
-  Expr
+
+  BoolIf
   (shift [this diff var]
     (-> this
        (update :test shift diff var)
@@ -544,99 +609,99 @@
                      (judgmentallyEqual then else) then
                      :else                         (->BoolIf test then else)))]
       (decide (normalize test) (normalize then) (normalize else))))
-  (typecheck [this] "TODO typecheck BoolIf"))
+  (typecheck [this] "TODO typecheck BoolIf")
 
 
-(defrecord NaturalT []
-  Expr
+
+  NaturalT
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Const :type)))
+    (->Const :type))
 
 
-(defrecord NaturalLit [n]
-  Expr
+
+  NaturalLit
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->NaturalT)))
+    (->NaturalT))
 
 
-(defrecord NaturalFold []
-  Expr
+
+  NaturalFold
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this] "TODO typecheck NaturalFold"))
+  (typecheck [this] "TODO typecheck NaturalFold")
 
 
-(defrecord NaturalBuild []
-  Expr
+
+  NaturalBuild
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this] "TODO typecheck NaturalBuild"))
+  (typecheck [this] "TODO typecheck NaturalBuild")
 
 
-(defrecord NaturalIsZero []
-  Expr
-  (shift [this diff var] this)
-  (subst [this var e]    this)
-  (alphaNormalize [this] this)
-  (normalize [this]      this)
-  (typecheck [this]
-    (->Pi "_" (->NaturalT) (->BoolT))))
 
-
-(defrecord NaturalEven []
-  Expr
+  NaturalIsZero
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->NaturalT) (->BoolT))))
+    (->Pi "_" (->NaturalT) (->BoolT)))
 
 
-(defrecord NaturalOdd []
-  Expr
+
+  NaturalEven
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->NaturalT) (->BoolT))))
+    (->Pi "_" (->NaturalT) (->BoolT)))
 
 
-(defrecord NaturalToInteger []
-  Expr
+
+  NaturalOdd
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->NaturalT) (->IntegerT))))
+    (->Pi "_" (->NaturalT) (->BoolT)))
 
 
-(defrecord NaturalShow []
-  Expr
+
+  NaturalToInteger
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->NaturalT) (->TextT))))
+    (->Pi "_" (->NaturalT) (->IntegerT)))
 
 
-(defrecord NaturalPlus [a b]
-  Expr
+
+  NaturalShow
+  (shift [this diff var] this)
+  (subst [this var e]    this)
+  (alphaNormalize [this] this)
+  (normalize [this]      this)
+  (typecheck [this]
+    (->Pi "_" (->NaturalT) (->TextT)))
+
+
+
+  NaturalPlus
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -659,11 +724,11 @@
                                                                                   (:n r)))
                      :else                                       (->NaturalPlus l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck NaturalPlus"))
+  (typecheck [this] "TODO typecheck NaturalPlus")
 
 
-(defrecord NaturalTimes [a b]
-  Expr
+
+  NaturalTimes
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -688,94 +753,90 @@
                                                                                   (:n r)))
                      :else                                       (->NaturalTimes l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck NaturalTimes"))
+  (typecheck [this] "TODO typecheck NaturalTimes")
 
 
-(defrecord IntegerT []
-  Expr
+
+  IntegerT
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Const :type)))
+    (->Const :type))
 
 
-(defrecord IntegerLit [n]
-  Expr
+
+  IntegerLit
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->IntegerT)))
+    (->IntegerT))
 
 
-(defrecord IntegerShow []
-  Expr
+
+  IntegerShow
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->IntegerT) (->TextT))))
+    (->Pi "_" (->IntegerT) (->TextT)))
 
 
-(defrecord IntegerToDouble []
-  Expr
+
+  IntegerToDouble
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->IntegerT) (->DoubleT))))
+    (->Pi "_" (->IntegerT) (->DoubleT)))
 
 
-(defrecord DoubleT []
-  Expr
+  DoubleT
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Const :type)))
+    (->Const :type))
 
 
-(defrecord DoubleLit [n]
-  Expr
+
+  DoubleLit
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->DoubleT)))
+    (->DoubleT))
 
 
-(defrecord DoubleShow []
-  Expr
+
+  DoubleShow
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->DoubleT) (->TextT))))
+    (->Pi "_" (->DoubleT) (->TextT)))
 
 
-(defrecord TextT []
-  Expr
+
+  TextT
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Const :type)))
+    (->Const :type))
 
 
-(defn map-chunks [this f]
-  (update this :chunks #(map (fn [el] (if (string? el) el (f el))) %)))
 
-(defrecord TextLit [chunks]
-  Expr
+  TextLit
   (shift [this diff var]
     (map-chunks this (fn [c] (subst c diff var))))
   (subst [this var e]
@@ -793,11 +854,11 @@
                (not (string? (first new-chunks))))
         (first new-chunks)
         (->TextLit new-chunks))))
-  (typecheck [this] "TODO typecheck TextLit"))
+  (typecheck [this] "TODO typecheck TextLit")
 
 
-(defrecord TextAppend [a b]
-  Expr
+
+  TextAppend
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -822,23 +883,24 @@
                           (instance? TextLit r)) (->TextLit (concat (:chunks l) (:chunks r)))
                      :else                       (->TextAppend l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck TextAppend"))
+  (typecheck [this] "TODO typecheck TextAppend")
 
 
-(defrecord ListT []
-  Expr
+
+  ListT
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->Const :type) (->Const :type))))
+    (->Pi "_" (->Const :type) (->Const :type)))
 
 
-(defrecord ListLit [type? exprs]
-  Expr
+
+  ListLit
   (shift [this diff var]
     (let [type?  (:type? this)
+          exprs  (:exprs this)
           type?' (when type? (shift type? diff var))
           exprs' (mapv #(shift % diff var) exprs)]
       (-> this
@@ -846,6 +908,7 @@
                 :exprs exprs'))))
   (subst [this var e]
     (let [type?  (:type? this)
+          exprs  (:exprs this)
           type?' (when type? (subst type? var e))
           exprs' (mapv #(subst % var e) exprs)]
       (-> this
@@ -859,11 +922,10 @@
     (-> this
        (assoc :type?  (when type? (normalize type?)))
        (update :exprs (partial map normalize))))
-  (typecheck [this] "TODO typecheck ListLit"))
+  (typecheck [this] "TODO typecheck ListLit")
 
 
-(defrecord ListAppend [a b]
-  Expr
+  ListAppend
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -887,41 +949,29 @@
                           (instance? TextLit r)) (update l :exprs concat (:exprs r))
                      :else                       (->ListAppend l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck ListAppend"))
+  (typecheck [this] "TODO typecheck ListAppend")
 
 
-(defrecord ListBuild []
-  Expr
+
+  ListBuild
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this] "TODO typecheck ListBuild"))
+  (typecheck [this] "TODO typecheck ListBuild")
 
 
-(defrecord ListFold []
-  Expr
+
+  ListFold
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this] "TODO typecheck ListFold"))
+  (typecheck [this] "TODO typecheck ListFold")
 
 
-(defrecord ListLength []
-  Expr
-  (shift [this diff var] this)
-  (subst [this var e]    this)
-  (alphaNormalize [this] this)
-  (normalize [this]      this)
-  (typecheck [this]
-    (->Pi "a"
-          (->Const :type)
-          (->Pi "_" (->App (->ListT) "a") (->NaturalT)))))
 
-
-(defrecord ListHead []
-  Expr
+  ListLength
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
@@ -929,13 +979,11 @@
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
-          (->Pi "_"
-                (->App (->ListT) "a")
-                (->App (->OptionalT) "a")))))
+          (->Pi "_" (->App (->ListT) "a") (->NaturalT))))
 
 
-(defrecord ListLast []
-  Expr
+
+  ListHead
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
@@ -945,20 +993,11 @@
           (->Const :type)
           (->Pi "_"
                 (->App (->ListT) "a")
-                (->App (->OptionalT) "a")))))
+                (->App (->OptionalT) "a"))))
 
 
-(defrecord ListIndexed []
-  Expr
-  (shift [this diff var] this)
-  (subst [this var e]    this)
-  (alphaNormalize [this] this)
-  (normalize [this]      this)
-  (typecheck [this] "TODO typecheck ListIndexed"))
 
-
-(defrecord ListReverse []
-  Expr
+  ListLast
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
@@ -968,21 +1007,44 @@
           (->Const :type)
           (->Pi "_"
                 (->App (->ListT) "a")
-                (->App (->ListT) "a")))))
+                (->App (->OptionalT) "a"))))
 
 
-(defrecord OptionalT []
-  Expr
+
+  ListIndexed
+  (shift [this diff var] this)
+  (subst [this var e]    this)
+  (alphaNormalize [this] this)
+  (normalize [this]      this)
+  (typecheck [this] "TODO typecheck ListIndexed")
+
+
+
+  ListReverse
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
-    (->Pi "_" (->Const :type) (->Const :type))))
+    (->Pi "a"
+          (->Const :type)
+          (->Pi "_"
+                (->App (->ListT) "a")
+                (->App (->ListT) "a"))))
 
 
-(defrecord OptionalLit [type val?]
-  Expr
+
+  OptionalT
+  (shift [this diff var] this)
+  (subst [this var e]    this)
+  (alphaNormalize [this] this)
+  (normalize [this]      this)
+  (typecheck [this]
+    (->Pi "_" (->Const :type) (->Const :type)))
+
+
+
+  OptionalLit
   (shift [this diff var]
     (let [val?  (:val? this)
           val?' (when val? (shift val? diff var))]
@@ -1003,29 +1065,29 @@
     (-> this
        (update :type normalize)
        (assoc  :val? (when val? (normalize val?)))))
-  (typecheck [this] "TODO typecheck OptionalLit"))
+  (typecheck [this] "TODO typecheck OptionalLit")
 
 
-(defrecord OptionalFold []
-  Expr
+
+  OptionalFold
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this] "TODO typecheck OptionalFold"))
+  (typecheck [this] "TODO typecheck OptionalFold")
 
 
-(defrecord OptionalBuild []
-  Expr
+
+  OptionalBuild
   (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
-  (typecheck [this] "TODO typecheck OptionalBuild"))
+  (typecheck [this] "TODO typecheck OptionalBuild")
 
 
-(defrecord RecordT [kvs]
-  Expr
+
+  RecordT
   (shift [this diff var]
     (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
   (subst [this var e]
@@ -1034,11 +1096,11 @@
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
   (normalize [this]
     (update this :kvs (fn [kvs] (map-vals normalize kvs))))
-  (typecheck [this] "TODO typecheck RecordT"))
+  (typecheck [this] "TODO typecheck RecordT")
 
 
-(defrecord RecordLit [kvs]
-  Expr
+
+  RecordLit
   (shift [this diff var]
     (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
   (subst [this var e]
@@ -1047,11 +1109,11 @@
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
   (normalize [this]
     (update this :kvs (fn [kvs] (map-vals normalize kvs))))
-  (typecheck [this] "TODO typecheck RecordLit"))
+  (typecheck [this] "TODO typecheck RecordLit")
 
 
-(defrecord UnionT [kvs]
-  Expr
+
+  UnionT
   (shift [this diff var]
     (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
   (subst [this var e]
@@ -1060,11 +1122,11 @@
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
   (normalize [this]
     (update this :kvs (fn [kvs] (map-vals normalize kvs))))
-  (typecheck [this] "TODO typecheck UnionT"))
+  (typecheck [this] "TODO typecheck UnionT")
 
 
-(defrecord UnionLit [k v kvs]
-  Expr
+
+  UnionLit
   (shift [this diff var]
     (-> this
        (update :v shift diff var)
@@ -1081,11 +1143,11 @@
     (-> this
        (update :v normalize)
        (update :kvs (fn [kvs] (map-vals normalize kvs)))))
-  (typecheck [this] "TODO typecheck UnionLit"))
+  (typecheck [this] "TODO typecheck UnionLit")
 
 
-(defrecord Combine [a b]
-  Expr
+
+  Combine
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -1110,11 +1172,11 @@
                           (instance? RecordLit r)) (->RecordLit (merge-with decide (:kvs l) (:kvs r)))
                      :else                         (->Combine l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck Combine"))
+  (typecheck [this] "TODO typecheck Combine")
 
 
-(defrecord CombineTypes [a b]
-  Expr
+
+  CombineTypes
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -1139,11 +1201,11 @@
                           (instance? RecordT r)) (->RecordT (merge-with decide (:kvs l) (:kvs r)))
                      :else                       (->CombineTypes l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck CombineTypes"))
+  (typecheck [this] "TODO typecheck CombineTypes")
 
 
-(defrecord Prefer [a b]
-  Expr
+
+  Prefer
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
@@ -1168,11 +1230,11 @@
                           (instance? RecordLit r)) (->RecordLit (merge (:kvs l) (:kvs r)))
                      :else                         (->Prefer l r)))]
       (decide (normalize a) (normalize b))))
-  (typecheck [this] "TODO typecheck Prefer"))
+  (typecheck [this] "TODO typecheck Prefer")
 
 
-(defrecord Merge [a b type?]
-  Expr
+
+  Merge
   (shift [this diff var]
     (let [type?  (:type? this)
           type?' (when type? (shift type? diff var))]
@@ -1202,11 +1264,11 @@
         (normalize (->App (get (:kvs a') (:k b'))
                           (:v b')))
         (->Merge a' b' type?'))))
-  (typecheck [this] "TODO typecheck Merge"))
+  (typecheck [this] "TODO typecheck Merge")
 
 
-(defrecord Constructors [e]
-  Expr
+
+  Constructors
   (shift [this diff var]
     (update this :e shift diff var))
   (subst [this var e]
@@ -1223,11 +1285,11 @@
                                              (dissoc kts k))))]
           (->RecordLit (map adapt kts)))
         (->Constructors e'))))
-  (typecheck [this] "TODO typecheck Constructors"))
+  (typecheck [this] "TODO typecheck Constructors")
 
 
-(defrecord Field [e k]
-  Expr
+
+  Field
   (shift [this diff var]
     (update this :e shift diff var))
   (subst [this var e]
@@ -1241,11 +1303,11 @@
           (normalize v)
           (->Field (->RecordLit (map-vals normalize (:kvs e'))) k))
         (assoc this :e e'))))
-  (typecheck [this] "TODO typecheck Field"))
+  (typecheck [this] "TODO typecheck Field")
 
 
-(defrecord Project [e ks]
-  Expr
+
+  Project
   (shift [this diff var]
     (update this :e shift diff var))
   (subst [this var e]
@@ -1260,11 +1322,11 @@
             (normalize (->RecordLit (select-keys kvs ks)))
             (->Project (->RecordLit (map-vals normalize kvs)) ks)))
         (assoc this :e e'))))
-  (typecheck [this] "TODO typecheck Project"))
+  (typecheck [this] "TODO typecheck Project")
 
 
-(defrecord ImportAlt [a b]
-  Expr
+
+  ImportAlt
   (shift [this diff var]
     (-> this
        (update :a shift diff var)
