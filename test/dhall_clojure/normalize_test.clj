@@ -31,6 +31,6 @@
 (deftest normalization-suite
   (doseq [[testcase {:keys [actual expected]}] (list-testcases)]
     (testing testcase
-      (let [actual'   (-> actual   parse expr alphaNormalize beta-normalize)
-            expected' (-> expected parse expr alphaNormalize beta-normalize)]
+      (let [actual'   (-> actual   parse expr alpha-normalize beta-normalize)
+            expected' (-> expected parse expr alpha-normalize beta-normalize)]
         (is (= actual' expected'))))))

@@ -5,7 +5,7 @@
 
 (defprotocol Expr
   "Interface that every Expression type should implement"
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     "α-normalize an expression by renaming all variables to `_` and using
     De Bruijn indices to distinguish them")
   (typecheck [this]
@@ -690,7 +690,7 @@
   "Returns `true` if two expressions are α-equivalent and β-equivalent and
   `false` otherwise"
   [a b]
-  (let [ab-normalize (comp beta-normalize alphaNormalize)]
+  (let [ab-normalize (comp beta-normalize alpha-normalize)]
     (= (ab-normalize a)
        (ab-normalize b))))
 
@@ -1276,255 +1276,255 @@
 (extend-protocol Expr
 
   Const
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck Const")
 
   Var
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck Var")
 
   Lam
-  (alphaNormalize [{:keys [arg type body] :as this}]
+  (alpha-normalize [{:keys [arg type body] :as this}]
     (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
       (assoc this
              :arg "_"
-             :type (alphaNormalize type)
+             :type (alpha-normalize type)
              :body (-> body
                       (subst (->Var arg 0) v1)
                       (shift -1 (->Var arg 0))
-                      (alphaNormalize)))))
+                      (alpha-normalize)))))
   (typecheck [this] "TODO typecheck Lam")
 
   Pi
-  (alphaNormalize [{:keys [arg type body] :as this}]
+  (alpha-normalize [{:keys [arg type body] :as this}]
     (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
       (assoc this
              :arg "_"
-             :type (alphaNormalize type)
+             :type (alpha-normalize type)
              :body (-> body
                       (subst (->Var arg 0) v1)
                       (shift -1 (->Var arg 0))
-                      (alphaNormalize)))))
+                      (alpha-normalize)))))
   (typecheck [this] "TODO typecheck Lam")
 
   App
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck App")
 
   Let
-  (alphaNormalize [{:keys [label type? body next] :as this}]
+  (alpha-normalize [{:keys [label type? body next] :as this}]
     (let [var (->Var label 0)
           v' (shift (->Var "_" 0) 1 var)]
       (assoc this
              :label "_"
-             :type? (when type? (alphaNormalize type?))
-             :body  (alphaNormalize body)
+             :type? (when type? (alpha-normalize type?))
+             :body  (alpha-normalize body)
              :next  (-> next
                        (subst var v')
                        (shift -1 var)
-                       alphaNormalize))))
+                       alpha-normalize))))
   (typecheck [this] "TODO typecheck Let")
 
   Annot
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :val  alphaNormalize)
-       (update :type alphaNormalize)))
+       (update :val  alpha-normalize)
+       (update :type alpha-normalize)))
   (typecheck [this] "TODO typecheck Annot")
 
   BoolT
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Const :type))
 
   BoolLit
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]      (->BoolT))
 
   BoolAnd
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck BoolAnd")
 
   BoolOr
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck BoolOr")
 
   BoolEQ
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck BoolEQ")
 
   BoolNE
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck BoolNE")
 
   BoolIf
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :test alphaNormalize)
-       (update :then alphaNormalize)
-       (update :else alphaNormalize)))
+       (update :test alpha-normalize)
+       (update :then alpha-normalize)
+       (update :else alpha-normalize)))
   (typecheck [this] "TODO typecheck BoolIf")
 
   NaturalT
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Const :type))
 
   NaturalLit
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->NaturalT))
 
   NaturalFold
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck NaturalFold")
 
   NaturalBuild
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck NaturalBuild")
 
   NaturalIsZero
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT)))
 
   NaturalEven
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT)))
 
   NaturalOdd
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT)))
 
   NaturalToInteger
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->IntegerT)))
 
   NaturalShow
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->TextT)))
 
   NaturalPlus
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck NaturalPlus")
 
   NaturalTimes
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck NaturalTimes")
 
   IntegerT
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Const :type))
 
   IntegerLit
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->IntegerT))
 
   IntegerShow
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->IntegerT) (->TextT)))
 
   IntegerToDouble
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->IntegerT) (->DoubleT)))
 
   DoubleT
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Const :type))
 
   DoubleLit
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->DoubleT))
 
   DoubleShow
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->DoubleT) (->TextT)))
 
   TextT
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Const :type))
 
   TextLit
-  (alphaNormalize [this]
-    (map-chunks this alphaNormalize))
+  (alpha-normalize [this]
+    (map-chunks this alpha-normalize))
   (typecheck [this] "TODO typecheck TextLit")
 
   TextAppend
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck TextAppend")
 
   ListT
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->Const :type) (->Const :type)))
 
   ListLit
-  (alphaNormalize [{:keys [type?] :as this}]
+  (alpha-normalize [{:keys [type?] :as this}]
     (-> this
-       (assoc :type?  (when type? (alphaNormalize type?)))
-       (update :exprs (partial map alphaNormalize))))
+       (assoc :type?  (when type? (alpha-normalize type?)))
+       (update :exprs (partial map alpha-normalize))))
   (typecheck [this] "TODO typecheck ListLit")
 
   ListAppend
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck ListAppend")
 
   ListBuild
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck ListBuild")
 
   ListFold
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck ListFold")
 
   ListLength
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
           (->Pi "_" (->App (->ListT) "a") (->NaturalT))))
 
   ListHead
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -1533,7 +1533,7 @@
                 (->App (->OptionalT) "a"))))
 
   ListLast
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -1542,11 +1542,11 @@
                 (->App (->OptionalT) "a"))))
 
   ListIndexed
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck ListIndexed")
 
   ListReverse
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -1555,66 +1555,66 @@
                 (->App (->ListT) "a"))))
 
   OptionalT
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this]
     (->Pi "_" (->Const :type) (->Const :type)))
 
   OptionalLit
-  (alphaNormalize [{:keys [val?] :as this}]
+  (alpha-normalize [{:keys [val?] :as this}]
     (-> this
-       (update :type alphaNormalize)
-       (assoc  :val? (when val? (alphaNormalize val?)))))
+       (update :type alpha-normalize)
+       (assoc  :val? (when val? (alpha-normalize val?)))))
   (typecheck [this] "TODO typecheck OptionalLit")
 
   OptionalFold
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck OptionalFold")
 
   OptionalBuild
-  (alphaNormalize [this] this)
+  (alpha-normalize [this] this)
   (typecheck [this] "TODO typecheck OptionalBuild")
 
   RecordT
-  (alphaNormalize [this]
-    (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
+  (alpha-normalize [this]
+    (update this :kvs (fn [kvs] (map-vals alpha-normalize kvs))))
   (typecheck [this] "TODO typecheck RecordT")
 
   RecordLit
-  (alphaNormalize [this]
-    (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
+  (alpha-normalize [this]
+    (update this :kvs (fn [kvs] (map-vals alpha-normalize kvs))))
   (typecheck [this] "TODO typecheck RecordLit")
 
   UnionT
-  (alphaNormalize [this]
-    (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
+  (alpha-normalize [this]
+    (update this :kvs (fn [kvs] (map-vals alpha-normalize kvs))))
   (typecheck [this] "TODO typecheck UnionT")
 
   UnionLit
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :v alphaNormalize)
-       (update :kvs (fn [kvs] (map-vals alphaNormalize kvs)))))
+       (update :v alpha-normalize)
+       (update :kvs (fn [kvs] (map-vals alpha-normalize kvs)))))
   (typecheck [this] "TODO typecheck UnionLit")
 
   Combine
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck Combine")
 
   CombineTypes
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck CombineTypes")
 
   Prefer
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (beta-normalize [{:keys [a b]}]
     (letfn [(decide [l r]
               (cond
@@ -1629,31 +1629,31 @@
   (typecheck [this] "TODO typecheck Prefer")
 
   Merge
-  (alphaNormalize [{:keys [type?] :as this}]
+  (alpha-normalize [{:keys [type?] :as this}]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)
-       (assoc :type? (when type? (alphaNormalize type?)))))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)
+       (assoc :type? (when type? (alpha-normalize type?)))))
   (typecheck [this] "TODO typecheck Merge")
 
   Constructors
-  (alphaNormalize [this]
-    (update this :e alphaNormalize))
+  (alpha-normalize [this]
+    (update this :e alpha-normalize))
   (typecheck [this] "TODO typecheck Constructors")
 
   Field
-  (alphaNormalize [this]
-    (update this :e alphaNormalize))
+  (alpha-normalize [this]
+    (update this :e alpha-normalize))
   (typecheck [this] "TODO typecheck Field")
 
   Project
-  (alphaNormalize [this]
-    (update this :e alphaNormalize))
+  (alpha-normalize [this]
+    (update this :e alpha-normalize))
   (typecheck [this] "TODO typecheck Project")
 
   ImportAlt
-  (alphaNormalize [this]
+  (alpha-normalize [this]
     (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
+       (update :a alpha-normalize)
+       (update :b alpha-normalize)))
   (typecheck [this] "TODO typecheck ImportAlt"))
