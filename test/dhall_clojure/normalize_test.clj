@@ -33,4 +33,4 @@
     (testing testcase
       (let [actual'   (-> actual   parse expr alphaNormalize normalize)
             expected' (-> expected parse expr alphaNormalize normalize)]
-        (is (.equals actual' expected'))))))
+        (is (= actual' expected'))))))

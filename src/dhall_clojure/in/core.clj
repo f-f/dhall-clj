@@ -1,7 +1,7 @@
 (ns dhall-clojure.in.core
   (:require [medley.core :refer [map-vals]]
-            [clojure.string :as str]))
-
+            [clojure.string :as str]
+            [clojure.pprint :refer [pprint]]))
 
 (defprotocol Expr
   "Interface that every Expression type should implement"
@@ -44,7 +44,7 @@
 
 
 (defrecord Const [c])
-(defrecord Var [var i])
+(defrecord Var [x i])
 (defrecord Lam [arg type body])
 (defrecord Pi [arg type body])
 (defrecord App [a b])
@@ -103,7 +103,7 @@
 (defrecord Constructors [e])
 (defrecord Field [e k])
 (defrecord Project [e ks])
-(defrecord ImportAlt [l r])
+(defrecord ImportAlt [a b])
 
 
 
@@ -249,18 +249,24 @@
                  (instance? ListBuild (:a f'))
                  (instance? App a')
                  (instance? App (:a a'))
-                 (instance? ListFold (:a (:a a')))) (normalize (:b a'))
+                 (instance? ListFold (:a (:a a'))))
+            (normalize (:b a'))
+
             ;; build/fold fusion for Natural
             (and (instance? NaturalBuild f')
                  (instance? App a')
-                 (instance? NaturalFold (:a a'))) (normalize (:b a'))
+                 (instance? NaturalFold (:a a')))
+            (normalize (:b a'))
+
             ;; build/fold fusion for Optional
             (and (instance? App f')
                  (instance? OptionalBuild (:a f'))
                  (instance? App a')
                  (instance? App (:a a'))
-                 (instance? OptionalFold (:a (:a a')))) (normalize (:b a'))
+                 (instance? OptionalFold (:a (:a a'))))
+            (normalize (:b a'))
 
+            ;; NaturalFold
             (and (instance? App         f')
                  (instance? App         (:a f'))
                  (instance? App         (:a (:a f')))
@@ -277,58 +283,92 @@
                          (normalize (->App succ' (go (dec n))))))]
               (go n0))
 
-            (instance? NaturalBuild f') (let [zero (->NaturalLit 0)
-                                              succ (->Lam "x"
-                                                          (->NaturalT)
-                                                          (->NaturalPlus (->Var "x" 0) (->NaturalLit 1)))]
-                                          (->App (->App (->App a' (->NaturalT)) succ) zero))
-            (and (instance? NaturalLit a')
-                 (instance? NaturalIsZero f'))    (->BoolLit (= 0 (:n a')))
-            (and (instance? NaturalLit a')
-                 (instance? NaturalEven f'))      (->BoolLit (even? (:n a')))
-            (and (instance? NaturalLit a')
-                 (instance? NaturalOdd f'))       (->BoolLit (odd? (:n a')))
-            (and (instance? NaturalLit a')
-                 (instance? NaturalToInteger f')) (->IntegerLit (:n a'))
-            (and (instance? NaturalLit a')
-                 (instance? NaturalShow f'))      (->TextLit [(str (:n a'))])
-            (and (instance? IntegerLit a')
-                 (instance? IntegerShow f'))      (->TextLit [(let [n (:n a')]
-                                                                (str (when (>= n 0) "+") n))])
-            (and (instance? IntegerLit a')
-                 (instance? IntegerToDouble f'))  (->DoubleLit (double (:n a')))
-            (and (instance? DoubleLit a')
-                 (instance? DoubleShow f'))       (->TextLit [(str (:n a'))])
-            (and (instance? App f')
-                 (instance? OptionalBuild (:a f')) (let [typ  (:a f')
-                                                         typ' (shift typ 1 (->Var "a" 0))
-                                                         optional (->App (->OptionalT) typ)
-                                                         just     (->Lam "a"
-                                                                         typ
-                                                                         (->OptionalLit typ'
-                                                                                        (->Var "a" 0)))
-                                                         nothing  (->OptionalLit typ nil)]
-                                                     (normalize (->App (->App (->App a' optional)
-                                                                              just)
-                                                                       nothing))))
-            (and (instance? App f')
-                 (instance? ListBuild (:a f')) (let [typ  (:a f')
-                                                     typ' (shift typ 1 (->Var "a" 0))
-                                                     _list (->App (->ListT) typ)
-                                                     _cons (->Lam
-                                                             "a"
-                                                             typ
-                                                             (->Lam
-                                                               "as"
-                                                               (->App (->ListT) typ')
-                                                               (->ListAppend
-                                                                 (->ListLit nil [(->Var "a" 0)])
-                                                                 (->Var "as" 0))))
-                                                     _nil  (->ListLit typ [])]
-                                                 (normalize (->App (->App (->App a' _list)
-                                                                          _cons)
-                                                                   _nil))))
+            ;; NaturalBuild
+            (instance? NaturalBuild f')
+            (let [zero (->NaturalLit 0)
+                  succ (->Lam "x"
+                              (->NaturalT)
+                              (->NaturalPlus (->Var "x" 0) (->NaturalLit 1)))]
+              (normalize (->App (->App (->App a' (->NaturalT)) succ) zero)))
 
+            ;; NaturalIsZero
+            (and (instance? NaturalLit a')
+                 (instance? NaturalIsZero f'))
+            (->BoolLit (= 0 (:n a')))
+
+            ;; NaturalEven
+            (and (instance? NaturalLit a')
+                 (instance? NaturalEven f'))
+            (->BoolLit (even? (:n a')))
+
+            ;; NaturalOdd
+            (and (instance? NaturalLit a')
+                 (instance? NaturalOdd f'))
+            (->BoolLit (odd? (:n a')))
+
+            ;; NaturalToInteger
+            (and (instance? NaturalLit a')
+                 (instance? NaturalToInteger f'))
+            (->IntegerLit (:n a'))
+
+            ;; NaturalShow
+            (and (instance? NaturalLit a')
+                 (instance? NaturalShow f'))
+            (->TextLit [(str (:n a'))])
+
+            ;; IntegerShow
+            (and (instance? IntegerLit a')
+                 (instance? IntegerShow f'))
+            (->TextLit [(let [n (:n a')]
+                          (str (when (>= n 0) "+") n))])
+
+            ;; IntegerToDouble
+            (and (instance? IntegerLit a')
+                 (instance? IntegerToDouble f'))
+            (->DoubleLit (double (:n a')))
+
+            ;; DoubleShow
+            (and (instance? DoubleLit a')
+                 (instance? DoubleShow f'))
+            (->TextLit [(str (:n a'))])
+
+            ;; OptionalBuild
+            (and (instance? App f')
+                 (instance? OptionalBuild (:a f')))
+            (let [typ  (:b f')
+                  typ' (shift typ 1 (->Var "a" 0))
+                  optional (->App (->OptionalT) typ)
+                  just     (->Lam "a"
+                                  typ
+                                  (->OptionalLit typ'
+                                                 (->Var "a" 0)))
+                  nothing  (->OptionalLit typ nil)
+                  res (->App (->App (->App a' optional)
+                                   just)
+                             nothing)]
+              (normalize res))
+
+            ;; ListBuild
+            (and (instance? App f')
+                 (instance? ListBuild (:a f')))
+            (let [typ  (:b f')
+                  typ' (shift typ 1 (->Var "a" 0))
+                  _list (->App (->ListT) typ)
+                  _cons (->Lam
+                          "a"
+                          typ
+                          (->Lam
+                            "as"
+                            (->App (->ListT) typ')
+                            (->ListAppend
+                              (->ListLit nil [(->Var "a" 0)])
+                              (->Var "as" 0))))
+                  _nil  (->ListLit typ [])]
+              (normalize (->App (->App (->App a' _list)
+                                       _cons)
+                                _nil)))
+
+            ;; ListFold
             (and (instance? App      f')
                  (instance? App      (:a f'))
                  (instance? App      (:a (:a f')))
@@ -343,35 +383,50 @@
                           (normalize (->App (->App _cons y) ys)))]
               (reduce fold (normalize _nil) xs))
 
+            ;; ListLength
             (and (instance? App f')
                  (instance? ListLength (:a f'))
-                 (instance? ListLit a'))        (->NaturalLit (count (:exprs a')))
+                 (instance? ListLit a'))
+            (->NaturalLit (count (:exprs a')))
+
+            ;; ListHead
             (and (instance? App f')
                  (instance? ListHead (:a f'))
-                 (instance? ListLit a'))      (normalize (->OptionalLit (:b f') (first (:exprs a'))))
+                 (instance? ListLit a'))
+            (normalize (->OptionalLit (:b f') (first (:exprs a'))))
+
+            ;; ListLast
             (and (instance? App f')
                  (instance? ListLast (:a f'))
-                 (instance? ListLit a'))      (normalize (->OptionalLit (:b f') (last (:exprs a'))))
+                 (instance? ListLit a'))
+            (normalize (->OptionalLit (:b f') (last (:exprs a'))))
+
+            ;; ListIndexed
             (and (instance? App f')
                  (instance? ListIndexed (:a f'))
-                 (instance? ListLit a'))         (let [t2 (->RecordT {"index" (->NaturalT)
-                                                                      "value" (:b f')})
-                                                       xs (:exprs a')
-                                                       typ? (when (empty? xs)
-                                                                  t2)
-                                                       adapt (fn [i el]
-                                                               (->RecordLit
-                                                                 {"index" (->NaturalLit i)
-                                                                  "value" el}))
-                                                       xs' (map-indexed adapt xs)]
-                                                   (normalize (->ListLit typ? xs')))
+                 (instance? ListLit a'))
+            (let [t2 (->RecordT {"index" (->NaturalT)
+                                 "value" (:b f')})
+                  xs (:exprs a')
+                  typ? (when (empty? xs)
+                         t2)
+                  adapt (fn [i el]
+                          (->RecordLit
+                            {"index" (->NaturalLit i)
+                             "value" el}))
+                  xs' (map-indexed adapt xs)]
+              (normalize (->ListLit typ? xs')))
+
+            ;; ListReverse
             (and (instance? App f')
                  (instance? ListReverse (:a f'))
-                 (instance? ListLit a'))         (let [xs   (:exprs a')
-                                                       typ? (when (empty? xs)
-                                                              (:b f'))]
-                                                   (normalize (->ListLit typ? (reverse xs))))
+                 (instance? ListLit a'))
+            (let [xs   (:exprs a')
+                  typ? (when (empty? xs)
+                         (:b f'))]
+              (normalize (->ListLit typ? (reverse xs))))
 
+            ;; OptionalFold
             (and (instance? App          f')
                  (instance? App          (:a f'))
                  (instance? App          (:a (:a f')))
