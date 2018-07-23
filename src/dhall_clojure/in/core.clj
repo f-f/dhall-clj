@@ -8,8 +8,6 @@
   (alphaNormalize [this]
     "α-normalize an expression by renaming all variables to `_` and using
     De Bruijn indices to distinguish them")
-  (normalize [this]
-    "Reduce an expression to its normal form, performing beta reduction")
   (typecheck [this]
     "Typecheck the expression. Returns the type on success, or excepts"))
 ;;  (emit [this]
@@ -681,88 +679,56 @@
        (update :b subst var e))))
 
 
-;; Implementation of Expr interface
+;; beta-normalize
+
+(defprotocol IBetaNormalize
+  (beta-normalize [this]
+    "Reduce an expression to its normal form, performing beta reduction"))
 
 
-(defn judgmentallyEqual
+(defn judgmentally-equal
   "Returns `true` if two expressions are α-equivalent and β-equivalent and
   `false` otherwise"
   [a b]
-  (let [alphaBetaNormalize (comp normalize alphaNormalize)]
-    (= (alphaBetaNormalize a)
-       (alphaBetaNormalize b))))
+  (let [ab-normalize (comp beta-normalize alphaNormalize)]
+    (= (ab-normalize a)
+       (ab-normalize b))))
 
 
 
-(extend-protocol Expr
+(extend-protocol IBetaNormalize
 
   Const
-  (alphaNormalize [this] this)
-  (normalize [this]      this)
-  (typecheck [this] "TODO typecheck Const")
-
-
+  (beta-normalize [this] this)
 
   Var
-  (alphaNormalize [this] this)
-  (normalize [this] this)
-  (typecheck [this] "TODO typecheck Var")
-
-
+  (beta-normalize [this] this)
 
   Lam
-  (alphaNormalize [{:keys [arg type body] :as this}]
-    (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
-      (assoc this
-             :arg "_"
-             :type (alphaNormalize type)
-             :body (-> body
-                      (subst (->Var arg 0) v1)
-                      (shift -1 (->Var arg 0))
-                      (alphaNormalize)))))
-  (normalize [this]
+  (beta-normalize [this]
     (-> this
-       (update :type normalize)
-       (update :body normalize)))
-  (typecheck [this] "TODO typecheck Lam")
-
-
+       (update :type beta-normalize)
+       (update :body beta-normalize)))
 
   Pi
-  (alphaNormalize [{:keys [arg type body] :as this}]
-    (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
-      (assoc this
-             :arg "_"
-             :type (alphaNormalize type)
-             :body (-> body
-                      (subst (->Var arg 0) v1)
-                      (shift -1 (->Var arg 0))
-                      (alphaNormalize)))))
-  (normalize [this]
+  (beta-normalize [this]
     (-> this
-       (update :type normalize)
-       (update :body normalize)))
-  (typecheck [this] "TODO typecheck Lam")
-
-
+       (update :type beta-normalize)
+       (update :body beta-normalize)))
 
   App
-  (alphaNormalize [this]
-    (-> this
-       (update :a alphaNormalize)
-       (update :b alphaNormalize)))
-  (normalize [this]
+  (beta-normalize [this]
     (let [f  (:a this)
           a  (:b this)
-          f' (normalize f)]
+          f' (beta-normalize f)]
       (if (instance? Lam f')
         (let [{:keys [arg type body]} f'
               a' (shift a 1 (->Var arg 0))]
           (-> body
              (subst (->Var arg 0) a')
              (shift -1 (->Var arg 0))
-             normalize))
-        (let [a' (normalize a)]
+             beta-normalize))
+        (let [a' (beta-normalize a)]
           (cond
             ;; build/fold fusion for List
             (and (instance? App f')
@@ -770,13 +736,13 @@
                  (instance? App a')
                  (instance? App (:a a'))
                  (instance? ListFold (:a (:a a'))))
-            (normalize (:b a'))
+            (beta-normalize (:b a'))
 
             ;; build/fold fusion for Natural
             (and (instance? NaturalBuild f')
                  (instance? App a')
                  (instance? NaturalFold (:a a')))
-            (normalize (:b a'))
+            (beta-normalize (:b a'))
 
             ;; build/fold fusion for Optional
             (and (instance? App f')
@@ -784,7 +750,7 @@
                  (instance? App a')
                  (instance? App (:a a'))
                  (instance? OptionalFold (:a (:a a'))))
-            (normalize (:b a'))
+            (beta-normalize (:b a'))
 
             ;; NaturalFold
             (and (instance? App         f')
@@ -799,8 +765,8 @@
                   _ (declare go)
                   go (fn [n]
                        (if (zero? n)
-                         (normalize zero)
-                         (normalize (->App succ' (go (dec n))))))]
+                         (beta-normalize zero)
+                         (beta-normalize (->App succ' (go (dec n))))))]
               (go n0))
 
             ;; NaturalBuild
@@ -809,7 +775,7 @@
                   succ (->Lam "x"
                               (->NaturalT)
                               (->NaturalPlus (->Var "x" 0) (->NaturalLit 1)))]
-              (normalize (->App (->App (->App a' (->NaturalT)) succ) zero)))
+              (beta-normalize (->App (->App (->App a' (->NaturalT)) succ) zero)))
 
             ;; NaturalIsZero
             (and (instance? NaturalLit a')
@@ -866,7 +832,7 @@
                   res (->App (->App (->App a' optional)
                                    just)
                              nothing)]
-              (normalize res))
+              (beta-normalize res))
 
             ;; ListBuild
             (and (instance? App f')
@@ -884,9 +850,10 @@
                               (->ListLit nil [(->Var "a" 0)])
                               (->Var "as" 0))))
                   _nil  (->ListLit typ [])]
-              (normalize (->App (->App (->App a' _list)
-                                       _cons)
-                                _nil)))
+              (beta-normalize
+                (->App (->App (->App a' _list)
+                              _cons)
+                       _nil)))
 
             ;; ListFold
             (and (instance? App      f')
@@ -900,8 +867,8 @@
                   t     (:b (:a f'))
                   xs    (:exprs (:b (:a (:a f'))))
                   fold  (fn [y ys]
-                          (normalize (->App (->App _cons y) ys)))]
-              (reduce fold (normalize _nil) xs))
+                          (beta-normalize (->App (->App _cons y) ys)))]
+              (reduce fold (beta-normalize _nil) xs))
 
             ;; ListLength
             (and (instance? App f')
@@ -913,13 +880,13 @@
             (and (instance? App f')
                  (instance? ListHead (:a f'))
                  (instance? ListLit a'))
-            (normalize (->OptionalLit (:b f') (first (:exprs a'))))
+            (beta-normalize (->OptionalLit (:b f') (first (:exprs a'))))
 
             ;; ListLast
             (and (instance? App f')
                  (instance? ListLast (:a f'))
                  (instance? ListLit a'))
-            (normalize (->OptionalLit (:b f') (last (:exprs a'))))
+            (beta-normalize (->OptionalLit (:b f') (last (:exprs a'))))
 
             ;; ListIndexed
             (and (instance? App f')
@@ -935,7 +902,7 @@
                             {"index" (->NaturalLit i)
                              "value" el}))
                   xs' (map-indexed adapt xs)]
-              (normalize (->ListLit typ? xs')))
+              (beta-normalize (->ListLit typ? xs')))
 
             ;; ListReverse
             (and (instance? App f')
@@ -944,7 +911,7 @@
             (let [xs   (:exprs a')
                   typ? (when (empty? xs)
                          (:b f'))]
-              (normalize (->ListLit typ? (reverse xs))))
+              (beta-normalize (->ListLit typ? (reverse xs))))
 
             ;; OptionalFold
             (and (instance? App          f')
@@ -956,14 +923,396 @@
             (let [nothing  a'
                   just     (:b f')
                   val?     (:val? (:b (:a (:a f'))))]
-              (normalize (if val?
-                           (->App just val?)
-                           nothing)))
+              (beta-normalize
+                (if val?
+                  (->App just val?)
+                  nothing)))
 
             :else (->App f' a'))))))
+
+  Let
+  (beta-normalize [{:keys [label body next]}]
+    (let [var   (->Var label 0)
+          body' (shift body 1 var)]
+      (beta-normalize
+        (-> next
+           (subst var body')
+           (shift -1 var)))))
+
+  Annot
+  (beta-normalize [this]
+    (beta-normalize (:val this)))
+
+  BoolT
+  (beta-normalize [this] this)
+
+  BoolLit
+  (beta-normalize [this] this)
+
+  BoolAnd
+  (beta-normalize [{:keys [a b]}]
+    (let [decide (fn [l r]
+                   (if (instance? BoolLit l)
+                     (if (:b l)
+                       r
+                       l)
+                     (if (instance? BoolLit r)
+                       (if (:b r)
+                         l
+                         r)
+                       (if (judgmentally-equal l r)
+                         l
+                         (->BoolAnd l r)))))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  BoolOr
+  (beta-normalize [{:keys [a b]}]
+    (let [decide (fn [l r]
+                   (if (instance? BoolLit l)
+                     (if-not (:b l)
+                       r
+                       l)
+                     (if (instance? BoolLit r)
+                       (if-not (:b r)
+                         l
+                         r)
+                       (if (judgmentally-equal l r)
+                         l
+                         (->BoolAnd l r)))))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  BoolEQ
+  (beta-normalize [{:keys [a b]}]
+    (let [decide (fn [l r]
+                   (cond
+                     (and (instance? BoolLit l) (:b l)) r
+                     (and (instance? BoolLit r) (:b r)) l
+                     (judgmentally-equal l r)           (->BoolLit true)
+                     :else                              (->BoolEQ l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  BoolNE
+  (beta-normalize [{:keys [a b]}]
+    (let [decide (fn [l r]
+                   (cond
+                     (and (instance? BoolLit l) (not (:b l))) r
+                     (and (instance? BoolLit r) (not (:b r))) l
+                     (judgmentally-equal l r)                 (->BoolLit false)
+                     :else                                    (->BoolNE l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  BoolIf
+  (beta-normalize [{:keys [test then else]}]
+    (let [decide (fn [test then else]
+                   (cond
+                     (instance? BoolLit test)       (if (:b test)
+                                                      then
+                                                      else)
+                     (and (instance? BoolLit then)
+                          (instance? BoolLit else)
+                          (:b then)
+                          (not (:b else)))          test
+                     (judgmentally-equal then else) then
+                     :else                          (->BoolIf test then else)))]
+      (decide (beta-normalize test)
+              (beta-normalize then)
+              (beta-normalize else))))
+
+  NaturalT
+  (beta-normalize [this] this)
+
+  NaturalLit
+  (beta-normalize [this] this)
+
+  NaturalFold
+  (beta-normalize [this] this)
+
+  NaturalBuild
+  (beta-normalize [this] this)
+
+  NaturalIsZero
+  (beta-normalize [this] this)
+
+  NaturalEven
+  (beta-normalize [this] this)
+
+  NaturalOdd
+  (beta-normalize [this] this)
+
+  NaturalToInteger
+  (beta-normalize [this] this)
+
+  NaturalShow
+  (beta-normalize [this] this)
+
+  NaturalPlus
+  (beta-normalize [{:keys [a b]}]
+    (let [decide (fn [l r]
+                   (cond
+                     (and (instance? NaturalLit l) (= 0 (:n l))) r
+                     (and (instance? NaturalLit r) (= 0 (:n r))) l
+                     (and (instance? NaturalLit l)
+                          (instance? NaturalLit r))              (->NaturalLit (+ (:n l)
+                                                                                  (:n r)))
+                     :else                                       (->NaturalPlus l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  NaturalTimes
+  (beta-normalize [{:keys [a b]}]
+    (let [decide (fn [l r]
+                   (cond
+                     (and (instance? NaturalLit l) (= 1 (:n l))) r
+                     (and (instance? NaturalLit r) (= 1 (:n r))) l
+                     (and (instance? NaturalLit l) (= 0 (:n l))) (->NaturalLit 0)
+                     (and (instance? NaturalLit r) (= 0 (:n r))) (->NaturalLit 0)
+                     (and (instance? NaturalLit l)
+                          (instance? NaturalLit r))              (->NaturalLit (* (:n l)
+                                                                                  (:n r)))
+                     :else                                       (->NaturalTimes l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  IntegerT
+  (beta-normalize [this] this)
+
+  IntegerLit
+  (beta-normalize [this] this)
+
+  IntegerShow
+  (beta-normalize [this] this)
+
+  IntegerToDouble
+  (beta-normalize [this] this)
+
+  DoubleT
+  (beta-normalize [this] this)
+
+  DoubleLit
+  (beta-normalize [this] this)
+
+  DoubleShow
+  (beta-normalize [this] this)
+
+  TextT
+  (beta-normalize [this] this)
+
+  TextLit
+  (beta-normalize [this]
+    (let [normalized-chunks (:chunks (map-chunks this beta-normalize))
+          new-chunks (mapcat #(if (instance? TextLit %)
+                                (:chunks %)
+                                (list %))
+                             normalized-chunks)]
+      ;; If we have only an expr we return that
+      (if (and (= 1 (count new-chunks))
+               (not (string? (first new-chunks))))
+        (first new-chunks)
+        (->TextLit new-chunks))))
+
+  TextAppend
+  (beta-normalize [{:keys [a b]}]
+    (let [empty-text? (fn [t]
+                        (and (instance? TextLit t)
+                             (-> t :chunks first str/blank?)))
+          decide (fn [l r]
+                   (cond
+                     (empty-text? l)             r
+                     (empty-text? r)             l
+                     (and (instance? TextLit l)
+                          (instance? TextLit r)) (->TextLit (concat (:chunks l) (:chunks r)))
+                     :else                       (->TextAppend l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  ListT
+  (beta-normalize [this] this)
+
+  ListLit
+  (beta-normalize [{:keys [type?] :as this}]
+    (-> this
+       (assoc :type?  (when type? (beta-normalize type?)))
+       (update :exprs (partial map beta-normalize))))
+
+  ListAppend
+  (beta-normalize [{:keys [a b]}]
+    (let [decide (fn [l r]
+                   (cond
+                     (and (instance? ListLit l)
+                          (empty? l))            r
+                     (and (instance? ListLit r)
+                          (empty?))              l
+                     (and (instance? TextLit l)
+                          (instance? TextLit r)) (update l :exprs concat (:exprs r))
+                     :else                       (->ListAppend l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  ListBuild
+  (beta-normalize [this] this)
+
+  ListFold
+  (beta-normalize [this] this)
+
+  ListHead
+  (beta-normalize [this] this)
+
+  ListLast
+  (beta-normalize [this] this)
+
+  ListIndexed
+  (beta-normalize [this] this)
+
+  ListReverse
+  (beta-normalize [this] this)
+
+  OptionalT
+  (beta-normalize [this] this)
+
+  OptionalLit
+  (beta-normalize [{:keys [val?] :as this}]
+    (-> this
+       (update :type beta-normalize)
+       (assoc  :val? (when val? (beta-normalize val?)))))
+
+  OptionalFold
+  (beta-normalize [this] this)
+
+  OptionalBuild
+  (beta-normalize [this] this)
+
+  RecordT
+  (beta-normalize [this]
+    (update this :kvs (fn [kvs] (map-vals beta-normalize kvs))))
+
+  RecordLit
+  (beta-normalize [this]
+    (update this :kvs (fn [kvs] (map-vals beta-normalize kvs))))
+
+  UnionT
+  (beta-normalize [this]
+    (update this :kvs (fn [kvs] (map-vals beta-normalize kvs))))
+
+  UnionLit
+  (beta-normalize [this]
+    (-> this
+       (update :v beta-normalize)
+       (update :kvs (fn [kvs] (map-vals beta-normalize kvs)))))
+
+  Combine
+  (beta-normalize [{:keys [a b]}]
+    (letfn [(decide [l r]
+              (cond
+                (and (instance? RecordLit l)
+                     (empty? l))              r
+                (and (instance? RecordLit r)
+                     (empty? r))              l
+                (and (instance? RecordLit l)
+                     (instance? RecordLit r)) (->RecordLit (merge-with decide (:kvs l) (:kvs r)))
+                :else                         (->Combine l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  CombineTypes
+  (beta-normalize [{:keys [a b]}]
+    (letfn [(decide [l r]
+              (cond
+                (and (instance? RecordT l)
+                     (empty? l))            r
+                (and (instance? RecordT r)
+                     (empty? r))            l
+                (and (instance? RecordT l)
+                     (instance? RecordT r)) (->RecordT (merge-with decide (:kvs l) (:kvs r)))
+                :else                       (->CombineTypes l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  Merge
+  (beta-normalize [{:keys [a b type?]}]
+    (let [a'     (beta-normalize a)
+          b'     (beta-normalize b)
+          type?' (when type? (beta-normalize type?))]
+      (if (and (instance? RecordLit a')
+               (instance? UnionLit b')
+               (contains? (:kvs a') (:k b')))
+        (beta-normalize
+          (->App (get (:kvs a') (:k b'))
+                 (:v b')))
+        (->Merge a' b' type?'))))
+
+  Constructors
+  (beta-normalize [this]
+    (let [e' (beta-normalize (:e this))]
+      (if (instance? UnionT e')
+        (let [kts   (:kvs e')
+              adapt (fn [[k v]]
+                      (->Lam k v (->UnionLit k
+                                             (->Var k 0)
+                                             (dissoc kts k))))]
+          (->RecordLit (map adapt kts)))
+        (->Constructors e'))))
+
+  Field
+  (beta-normalize [{:keys [e k] :as this}]
+    (let [e' (beta-normalize e)]
+      (if (instance? RecordLit e')
+        (if-let [v (get (:kvs e') k)]
+          (beta-normalize v)
+          (->Field (->RecordLit (map-vals beta-normalize (:kvs e'))) k))
+        (assoc this :e e'))))
+
+  Project
+  (beta-normalize [{:keys [e ks] :as this}]
+    (let [e' (beta-normalize e)]
+      (if (instance? RecordLit e')
+        (let [kvs (:kvs e')]
+          (if (every? (fn [k] (contains? kvs k)) ks)
+            (beta-normalize (->RecordLit (select-keys kvs ks)))
+            (->Project (->RecordLit (map-vals beta-normalize kvs)) ks)))
+        (assoc this :e e'))))
+
+  ImportAlt
+  (beta-normalize [this]
+    (beta-normalize (:a this))))
+
+
+;; Implementation of Expr interface
+
+
+(extend-protocol Expr
+
+  Const
+  (alphaNormalize [this] this)
+  (typecheck [this] "TODO typecheck Const")
+
+  Var
+  (alphaNormalize [this] this)
+  (typecheck [this] "TODO typecheck Var")
+
+  Lam
+  (alphaNormalize [{:keys [arg type body] :as this}]
+    (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
+      (assoc this
+             :arg "_"
+             :type (alphaNormalize type)
+             :body (-> body
+                      (subst (->Var arg 0) v1)
+                      (shift -1 (->Var arg 0))
+                      (alphaNormalize)))))
+  (typecheck [this] "TODO typecheck Lam")
+
+  Pi
+  (alphaNormalize [{:keys [arg type body] :as this}]
+    (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
+      (assoc this
+             :arg "_"
+             :type (alphaNormalize type)
+             :body (-> body
+                      (subst (->Var arg 0) v1)
+                      (shift -1 (->Var arg 0))
+                      (alphaNormalize)))))
+  (typecheck [this] "TODO typecheck Lam")
+
+  App
+  (alphaNormalize [this]
+    (-> this
+       (update :a alphaNormalize)
+       (update :b alphaNormalize)))
   (typecheck [this] "TODO typecheck App")
-
-
 
   Let
   (alphaNormalize [{:keys [label type? body next] :as this}]
@@ -977,120 +1326,51 @@
                        (subst var v')
                        (shift -1 var)
                        alphaNormalize))))
-  (normalize [{:keys [label body next]}]
-    (let [var   (->Var label 0)
-          body' (shift body 1 var)]
-      (normalize (-> next
-                    (subst var body')
-                    (shift -1 var)))))
   (typecheck [this] "TODO typecheck Let")
-
-
 
   Annot
   (alphaNormalize [this]
     (-> this
        (update :val  alphaNormalize)
        (update :type alphaNormalize)))
-  (normalize [this]
-    (normalize (:val this)))
   (typecheck [this] "TODO typecheck Annot")
-
 
   BoolT
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Const :type))
 
-
-
   BoolLit
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]      (->BoolT))
-
-
 
   BoolAnd
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [decide (fn [l r]
-                   (if (instance? BoolLit l)
-                     (if (:b l)
-                       r
-                       l)
-                     (if (instance? BoolLit r)
-                       (if (:b r)
-                         l
-                         r)
-                       (if (judgmentallyEqual l r)
-                         l
-                         (->BoolAnd l r)))))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck BoolAnd")
-
-
 
   BoolOr
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [decide (fn [l r]
-                   (if (instance? BoolLit l)
-                     (if-not (:b l)
-                       r
-                       l)
-                     (if (instance? BoolLit r)
-                       (if-not (:b r)
-                         l
-                         r)
-                       (if (judgmentallyEqual l r)
-                         l
-                         (->BoolAnd l r)))))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck BoolOr")
-
-
 
   BoolEQ
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [decide (fn [l r]
-                   (cond
-                     (and (instance? BoolLit l) (:b l)) r
-                     (and (instance? BoolLit r) (:b r)) l
-                     (judgmentallyEqual l r)            (->BoolLit true)
-                     :else                              (->BoolEQ l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck BoolEQ")
-
-
 
   BoolNE
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [decide (fn [l r]
-                   (cond
-                     (and (instance? BoolLit l) (not (:b l))) r
-                     (and (instance? BoolLit r) (not (:b r))) l
-                     (judgmentallyEqual l r)                  (->BoolLit false)
-                     :else                                    (->BoolNE l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck BoolNE")
-
-
 
   BoolIf
   (alphaNormalize [this]
@@ -1098,314 +1378,162 @@
        (update :test alphaNormalize)
        (update :then alphaNormalize)
        (update :else alphaNormalize)))
-  (normalize [{:keys [test then else]}]
-    (let [decide (fn [test then else]
-                   (cond
-                     (instance? BoolLit test)      (if (:b test)
-                                                     then
-                                                     else)
-                     (and (instance? BoolLit then)
-                          (instance? BoolLit else)
-                          (:b then)
-                          (not (:b else)))         test
-                     (judgmentallyEqual then else) then
-                     :else                         (->BoolIf test then else)))]
-      (decide (normalize test) (normalize then) (normalize else))))
   (typecheck [this] "TODO typecheck BoolIf")
-
-
 
   NaturalT
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Const :type))
 
-
-
   NaturalLit
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->NaturalT))
 
-
-
   NaturalFold
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this] "TODO typecheck NaturalFold")
-
-
 
   NaturalBuild
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this] "TODO typecheck NaturalBuild")
-
-
 
   NaturalIsZero
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT)))
-
-
 
   NaturalEven
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT)))
-
-
 
   NaturalOdd
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->BoolT)))
 
-
-
   NaturalToInteger
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->IntegerT)))
 
-
-
   NaturalShow
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->NaturalT) (->TextT)))
-
-
 
   NaturalPlus
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [decide (fn [l r]
-                   (cond
-                     (and (instance? NaturalLit l) (= 0 (:n l))) r
-                     (and (instance? NaturalLit r) (= 0 (:n r))) l
-                     (and (instance? NaturalLit l)
-                          (instance? NaturalLit r))              (->NaturalLit (+ (:n l)
-                                                                                  (:n r)))
-                     :else                                       (->NaturalPlus l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck NaturalPlus")
-
-
 
   NaturalTimes
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [decide (fn [l r]
-                   (cond
-                     (and (instance? NaturalLit l) (= 1 (:n l))) r
-                     (and (instance? NaturalLit r) (= 1 (:n r))) l
-                     (and (instance? NaturalLit l) (= 0 (:n l))) (->NaturalLit 0)
-                     (and (instance? NaturalLit r) (= 0 (:n r))) (->NaturalLit 0)
-                     (and (instance? NaturalLit l)
-                          (instance? NaturalLit r))              (->NaturalLit (* (:n l)
-                                                                                  (:n r)))
-                     :else                                       (->NaturalTimes l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck NaturalTimes")
-
-
 
   IntegerT
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Const :type))
-
-
 
   IntegerLit
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->IntegerT))
 
-
-
   IntegerShow
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->IntegerT) (->TextT)))
 
-
-
   IntegerToDouble
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->IntegerT) (->DoubleT)))
 
-
   DoubleT
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Const :type))
-
-
 
   DoubleLit
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->DoubleT))
 
-
-
   DoubleShow
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->DoubleT) (->TextT)))
 
-
-
   TextT
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Const :type))
-
-
 
   TextLit
   (alphaNormalize [this]
     (map-chunks this alphaNormalize))
-  (normalize [this]
-    (let [normalized-chunks (:chunks (map-chunks this normalize))
-          new-chunks (mapcat #(if (instance? TextLit %)
-                                (:chunks %)
-                                (list %))
-                             normalized-chunks)]
-      ;; If we have only an expr we return that
-      (if (and (= 1 (count new-chunks))
-               (not (string? (first new-chunks))))
-        (first new-chunks)
-        (->TextLit new-chunks))))
   (typecheck [this] "TODO typecheck TextLit")
-
-
 
   TextAppend
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [empty-text? (fn [t]
-                        (and (instance? TextLit t)
-                             (-> t :chunks first str/blank?)))
-          decide (fn [l r]
-                   (cond
-                     (empty-text? l)             r
-                     (empty-text? r)             l
-                     (and (instance? TextLit l)
-                          (instance? TextLit r)) (->TextLit (concat (:chunks l) (:chunks r)))
-                     :else                       (->TextAppend l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck TextAppend")
-
-
 
   ListT
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->Const :type) (->Const :type)))
-
-
 
   ListLit
   (alphaNormalize [{:keys [type?] :as this}]
     (-> this
        (assoc :type?  (when type? (alphaNormalize type?)))
        (update :exprs (partial map alphaNormalize))))
-  (normalize [{:keys [type?] :as this}]
-    (-> this
-       (assoc :type?  (when type? (normalize type?)))
-       (update :exprs (partial map normalize))))
   (typecheck [this] "TODO typecheck ListLit")
-
 
   ListAppend
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (let [decide (fn [l r]
-                   (cond
-                     (and (instance? ListLit l)
-                          (empty? l))            r
-                     (and (instance? ListLit r)
-                          (empty?))              l
-                     (and (instance? TextLit l)
-                          (instance? TextLit r)) (update l :exprs concat (:exprs r))
-                     :else                       (->ListAppend l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck ListAppend")
-
-
 
   ListBuild
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this] "TODO typecheck ListBuild")
-
-
 
   ListFold
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this] "TODO typecheck ListFold")
-
-
 
   ListLength
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
           (->Pi "_" (->App (->ListT) "a") (->NaturalT))))
 
-
-
   ListHead
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
           (->Pi "_"
                 (->App (->ListT) "a")
                 (->App (->OptionalT) "a"))))
-
-
 
   ListLast
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -1413,18 +1541,12 @@
                 (->App (->ListT) "a")
                 (->App (->OptionalT) "a"))))
 
-
-
   ListIndexed
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this] "TODO typecheck ListIndexed")
-
-
 
   ListReverse
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "a"
           (->Const :type)
@@ -1432,129 +1554,68 @@
                 (->App (->ListT) "a")
                 (->App (->ListT) "a"))))
 
-
-
   OptionalT
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this]
     (->Pi "_" (->Const :type) (->Const :type)))
-
-
 
   OptionalLit
   (alphaNormalize [{:keys [val?] :as this}]
     (-> this
        (update :type alphaNormalize)
        (assoc  :val? (when val? (alphaNormalize val?)))))
-  (normalize [{:keys [val?] :as this}]
-    (-> this
-       (update :type normalize)
-       (assoc  :val? (when val? (normalize val?)))))
   (typecheck [this] "TODO typecheck OptionalLit")
-
-
 
   OptionalFold
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this] "TODO typecheck OptionalFold")
-
-
 
   OptionalBuild
   (alphaNormalize [this] this)
-  (normalize [this]      this)
   (typecheck [this] "TODO typecheck OptionalBuild")
-
-
 
   RecordT
   (alphaNormalize [this]
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
-  (normalize [this]
-    (update this :kvs (fn [kvs] (map-vals normalize kvs))))
   (typecheck [this] "TODO typecheck RecordT")
-
-
 
   RecordLit
   (alphaNormalize [this]
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
-  (normalize [this]
-    (update this :kvs (fn [kvs] (map-vals normalize kvs))))
   (typecheck [this] "TODO typecheck RecordLit")
-
-
 
   UnionT
   (alphaNormalize [this]
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
-  (normalize [this]
-    (update this :kvs (fn [kvs] (map-vals normalize kvs))))
   (typecheck [this] "TODO typecheck UnionT")
-
-
 
   UnionLit
   (alphaNormalize [this]
     (-> this
        (update :v alphaNormalize)
        (update :kvs (fn [kvs] (map-vals alphaNormalize kvs)))))
-  (normalize [this]
-    (-> this
-       (update :v normalize)
-       (update :kvs (fn [kvs] (map-vals normalize kvs)))))
   (typecheck [this] "TODO typecheck UnionLit")
-
-
 
   Combine
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (letfn [(decide [l r]
-              (cond
-                (and (instance? RecordLit l)
-                     (empty? l))              r
-                (and (instance? RecordLit r)
-                     (empty? r))              l
-                (and (instance? RecordLit l)
-                     (instance? RecordLit r)) (->RecordLit (merge-with decide (:kvs l) (:kvs r)))
-                :else                         (->Combine l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck Combine")
-
-
 
   CombineTypes
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
-    (letfn [(decide [l r]
-              (cond
-                (and (instance? RecordT l)
-                     (empty? l))            r
-                (and (instance? RecordT r)
-                     (empty? r))            l
-                (and (instance? RecordT l)
-                     (instance? RecordT r)) (->RecordT (merge-with decide (:kvs l) (:kvs r)))
-                :else                       (->CombineTypes l r)))]
-      (decide (normalize a) (normalize b))))
   (typecheck [this] "TODO typecheck CombineTypes")
-
-
 
   Prefer
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [{:keys [a b]}]
+  (beta-normalize [{:keys [a b]}]
     (letfn [(decide [l r]
               (cond
                 (and (instance? RecordLit l)
@@ -1564,10 +1625,8 @@
                 (and (instance? RecordLit l)
                      (instance? RecordLit r)) (->RecordLit (merge (:kvs l) (:kvs r)))
                 :else                         (->Prefer l r)))]
-      (decide (normalize a) (normalize b))))
+      (decide (beta-normalize a) (beta-normalize b))))
   (typecheck [this] "TODO typecheck Prefer")
-
-
 
   Merge
   (alphaNormalize [{:keys [type?] :as this}]
@@ -1575,71 +1634,26 @@
        (update :a alphaNormalize)
        (update :b alphaNormalize)
        (assoc :type? (when type? (alphaNormalize type?)))))
-  (normalize [{:keys [a b type?]}]
-    (let [a'     (normalize a)
-          b'     (normalize b)
-          type?' (when type? (normalize type?))]
-      (if (and (instance? RecordLit a')
-               (instance? UnionLit b')
-               (contains? (:kvs a') (:k b')))
-        (normalize (->App (get (:kvs a') (:k b'))
-                          (:v b')))
-        (->Merge a' b' type?'))))
   (typecheck [this] "TODO typecheck Merge")
-
-
 
   Constructors
   (alphaNormalize [this]
     (update this :e alphaNormalize))
-  (normalize [this]
-    (let [e' (normalize (:e this))]
-      (if (instance? UnionT e')
-        (let [kts   (:kvs e')
-              adapt (fn [[k v]]
-                      (->Lam k v (->UnionLit k
-                                             (->Var k 0)
-                                             (dissoc kts k))))]
-          (->RecordLit (map adapt kts)))
-        (->Constructors e'))))
   (typecheck [this] "TODO typecheck Constructors")
-
-
 
   Field
   (alphaNormalize [this]
     (update this :e alphaNormalize))
-  (normalize [{:keys [e k] :as this}]
-    (let [e' (normalize e)]
-      (if (instance? RecordLit e')
-        (if-let [v (get (:kvs e') k)]
-          (normalize v)
-          (->Field (->RecordLit (map-vals normalize (:kvs e'))) k))
-        (assoc this :e e'))))
   (typecheck [this] "TODO typecheck Field")
-
-
 
   Project
   (alphaNormalize [this]
     (update this :e alphaNormalize))
-  (normalize [{:keys [e ks] :as this}]
-    (let [e' (normalize e)]
-      (if (instance? RecordLit e')
-        (let [kvs (:kvs e')]
-          (if (every? (fn [k] (contains? kvs k)) ks)
-            (normalize (->RecordLit (select-keys kvs ks)))
-            (->Project (->RecordLit (map-vals normalize kvs)) ks)))
-        (assoc this :e e'))))
   (typecheck [this] "TODO typecheck Project")
-
-
 
   ImportAlt
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
        (update :b alphaNormalize)))
-  (normalize [this]
-    (normalize (:a this)))
   (typecheck [this] "TODO typecheck ImportAlt"))
