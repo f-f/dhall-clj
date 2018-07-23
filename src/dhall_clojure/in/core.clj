@@ -5,16 +5,6 @@
 
 (defprotocol Expr
   "Interface that every Expression type should implement"
-  (shift [this diff var]
-    "`shift` is used by both normalization and type-checking to avoid variable
-    capture by shifting variable indices.
-    `(shift e diff {:keys [i x]})` modifies the expression `e` by adding `diff`
-    to the indices of all variables named `x` whose indices are greater than
-    `(+ n m)`, where `m` is the number of bound variables of the same name
-    within that scope.
-    `diff` is always +1 or -1, because we either:
-    * increment variables by `1` to avoid variable capture during substitution
-    * decrement variables by `1` when deleting lambdas after substitution")
   (subst [this var e]
     "Substitute all occurrences of a variable with an expression
     E.g. (subst this var e)  ~  this[var := e]")
@@ -27,6 +17,19 @@
     "Typecheck the expression. Returns the type on success, or excepts"))
 ;;  (emit [this]
 ;;    "Return a Clojure form from a Dhall expression"))
+
+
+(defprotocol IShift
+  (shift [this diff var]
+    "`shift` is used by both normalization and type-checking to avoid variable
+    capture by shifting variable indices.
+    `(shift e diff {:keys [i x]})` modifies the expression `e` by adding `diff`
+    to the indices of all variables named `x` whose indices are greater than
+    `(+ n m)`, where `m` is the number of bound variables of the same name
+    within that scope.
+    `diff` is always +1 or -1, because we either:
+    * increment variables by `1` to avoid variable capture during substitution
+    * decrement variables by `1` when deleting lambdas after substitution"))
 
 
 ;; All classes that form the expression tree follow
@@ -106,6 +109,295 @@
 (defrecord ImportAlt [a b])
 
 
+;; Utils
+
+
+(defn map-chunks [this f]
+  (update this :chunks #(map (fn [el] (if (string? el) el (f el))) %)))
+
+
+
+;; Shift
+
+(extend-protocol IShift
+
+  Const
+  (shift [this diff var] this)
+
+  Var
+  (shift [this diff {:keys [x i] :as var}]
+    (let [x'  (:x this)
+          i'  (:i this)
+          i'' (if (and (= x x') (<= i i'))
+                (+ i' diff)
+                i')]
+      (assoc this :i i'')))
+
+  Lam
+  (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
+    (let [i' (if (= x arg)
+               (inc i)
+               i)
+          type' (shift type diff var)
+          body' (shift body diff (->Var x i'))]
+      (->Lam arg type' body')))
+
+  Pi
+  (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
+    (let [i' (if (= x arg)
+               (inc i)
+               i)
+          type' (shift type diff var)
+          body' (shift body diff (->Var x i'))]
+      (->Pi arg type' body')))
+
+  App
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  Let
+  (shift [{:keys [label type? body next]} diff {:keys [x i] :as var}]
+    (let [i' (if (= x label)
+               (inc i)
+               i)
+          type?' (when type? (shift type? diff var))
+          body'  (shift body diff var)
+          next'  (shift next diff (->Var x i'))]
+      (->Let label type?' body' next')))
+
+  Annot
+  (shift [this diff var]
+    (-> this
+       (update :val  shift diff var)
+       (update :type shift diff var)))
+
+  BoolT
+  (shift [this diff var] this)
+
+  BoolLit
+  (shift [this diff var] this)
+
+  BoolAnd
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  BoolOr
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  BoolEQ
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  BoolNE
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  BoolIf
+  (shift [this diff var]
+    (-> this
+       (update :test shift diff var)
+       (update :then shift diff var)
+       (update :else shift diff var)))
+
+  NaturalT
+  (shift [this diff var] this)
+
+  NaturalLit
+  (shift [this diff var] this)
+
+  NaturalFold
+  (shift [this diff var] this)
+
+  NaturalBuild
+  (shift [this diff var] this)
+
+  NaturalIsZero
+  (shift [this diff var] this)
+
+  NaturalEven
+  (shift [this diff var] this)
+
+  NaturalOdd
+  (shift [this diff var] this)
+
+  NaturalToInteger
+  (shift [this diff var] this)
+
+  NaturalShow
+  (shift [this diff var] this)
+
+  NaturalPlus
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  NaturalTimes
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  IntegerT
+  (shift [this diff var] this)
+
+  IntegerLit
+  (shift [this diff var] this)
+
+  IntegerShow
+  (shift [this diff var] this)
+
+  IntegerToDouble
+  (shift [this diff var] this)
+
+  DoubleT
+  (shift [this diff var] this)
+
+  DoubleLit
+  (shift [this diff var] this)
+
+  DoubleShow
+  (shift [this diff var] this)
+
+  TextT
+  (shift [this diff var] this)
+
+  TextLit
+  (shift [this diff var]
+    (map-chunks this (fn [c] (subst c diff var))))
+
+  TextAppend
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  ListT
+  (shift [this diff var] this)
+
+  ListLit
+  (shift [{:keys [type? exprs] :as this} diff var]
+    (-> this
+       (assoc :type? (when type? (shift type? diff var))
+              :exprs (mapv #(shift % diff var) exprs))))
+
+  ListAppend
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  ListBuild
+  (shift [this diff var] this)
+
+  ListFold
+  (shift [this diff var] this)
+
+  ListLength
+  (shift [this diff var] this)
+
+  ListHead
+  (shift [this diff var] this)
+
+  ListLast
+  (shift [this diff var] this)
+
+  ListIndexed
+  (shift [this diff var] this)
+
+  ListReverse
+  (shift [this diff var] this)
+
+  OptionalT
+  (shift [this diff var] this)
+
+  OptionalLit
+  (shift [{:keys [val?] :as this} diff var]
+    (-> this
+       (update :type shift diff var)
+       (assoc :val? (when val? (shift val? diff var)))))
+
+  OptionalFold
+  (shift [this diff var] this)
+
+  OptionalBuild
+  (shift [this diff var] this)
+
+  RecordT
+  (shift [this diff var]
+    (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
+
+  RecordLit
+  (shift [this diff var]
+    (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
+
+  UnionT
+  (shift [this diff var]
+    (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
+
+  UnionLit
+  (shift [this diff var]
+    (-> this
+       (update :v shift diff var)
+       (update :kvs (fn [kvs] (map-vals #(shift % diff var) kvs)))))
+
+  Combine
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  CombineTypes
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  Prefer
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var)))
+
+  Constructors
+  (shift [this diff var]
+    (update this :e shift diff var))
+
+  Merge
+  (shift [this diff var]
+    (let [type?  (:type? this)
+          type?' (when type? (shift type? diff var))]
+      (-> this
+         (update :a shift diff var)
+         (update :b shift diff var)
+         (assoc :type? type?'))))
+
+  Field
+  (shift [this diff var]
+    (update this :e shift diff var))
+
+  Project
+  (shift [this diff var]
+    (update this :e shift diff var))
+
+  ImportAlt
+  (shift [this diff var]
+    (-> this
+       (update :a shift diff var)
+       (update :b shift diff var))))
+
+
 
 ;; Implementation of Expr interface
 
@@ -118,16 +410,11 @@
     (= (alphaBetaNormalize a)
        (alphaBetaNormalize b))))
 
-(defn map-chunks [this f]
-  (update this :chunks #(map (fn [el] (if (string? el) el (f el))) %)))
-
-
 
 
 (extend-protocol Expr
 
   Const
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -136,13 +423,6 @@
 
 
   Var
-  (shift [this diff {:keys [x i] :as var}]
-    (let [x'  (:x this)
-          i'  (:i this)
-          i'' (if (and (= x x') (<= i i'))
-                (+ i' diff)
-                i')]
-      (assoc this :i i'')))
   (subst [this var e]
     (if (= this var)
       e
@@ -154,13 +434,6 @@
 
 
   Lam
-  (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
-    (let [i' (if (= x arg)
-               (inc i)
-               i)
-          type' (shift type diff var)
-          body' (shift body diff (->Var x i'))]
-      (->Lam arg type' body')))
   (subst [this {:keys [x i] :as var} e]
     (let [y (:arg this)
           i' (if (= x y)
@@ -187,13 +460,6 @@
 
 
   Pi
-  (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
-       (let [i' (if (= x arg)
-                  (inc i)
-                  i)
-             type' (shift type diff var)
-             body' (shift body diff (->Var x i'))]
-         (->Pi arg type' body')))
   (subst [this {:keys [x i] :as var} e]
     (let [y (:arg this)
           i' (if (= x y)
@@ -220,9 +486,6 @@
 
 
   App
-  (shift [{:keys [a b]} diff var]
-    (->App (shift a diff var)
-           (shift b diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -446,14 +709,6 @@
 
 
   Let
-  (shift [{:keys [label type? body next]} diff {:keys [x i] :as var}]
-    (let [i' (if (= x label)
-               (inc i)
-               i)
-          type?' (when type? (shift type? diff var))
-          body'  (shift body diff var)
-          next'  (shift next diff (->Var x i'))]
-      (->Let label type?' body' next')))
   (subst [this {:keys [x i] :as var} e]
     (let [y  (:label this)
           i' (if (= x y)
@@ -487,10 +742,6 @@
 
 
   Annot
-  (shift [this diff var]
-    (-> this
-       (update :val  shift diff var)
-       (update :type shift diff var)))
   (subst [this var e]
     (-> this
        (update :val  subst var e)
@@ -505,7 +756,6 @@
 
 
   BoolT
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -515,7 +765,6 @@
 
 
   BoolLit
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -524,10 +773,6 @@
 
 
   BoolAnd
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -555,10 +800,6 @@
 
 
   BoolOr
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -586,10 +827,6 @@
 
 
   BoolEQ
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -611,10 +848,6 @@
 
 
   BoolNE
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -636,11 +869,6 @@
 
 
   BoolIf
-  (shift [this diff var]
-    (-> this
-       (update :test shift diff var)
-       (update :then shift diff var)
-       (update :else shift diff var)))
   (subst [this var e]
     (-> this
        (update :test subst var e)
@@ -669,7 +897,6 @@
 
 
   NaturalT
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -679,7 +906,6 @@
 
 
   NaturalLit
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -689,7 +915,6 @@
 
 
   NaturalFold
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -698,7 +923,6 @@
 
 
   NaturalBuild
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -707,7 +931,6 @@
 
 
   NaturalIsZero
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -717,7 +940,6 @@
 
 
   NaturalEven
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -727,7 +949,6 @@
 
 
   NaturalOdd
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -737,7 +958,6 @@
 
 
   NaturalToInteger
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -747,7 +967,6 @@
 
 
   NaturalShow
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -757,10 +976,6 @@
 
 
   NaturalPlus
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -784,10 +999,6 @@
 
 
   NaturalTimes
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -813,7 +1024,6 @@
 
 
   IntegerT
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -823,7 +1033,6 @@
 
 
   IntegerLit
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -833,7 +1042,6 @@
 
 
   IntegerShow
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -843,7 +1051,6 @@
 
 
   IntegerToDouble
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -852,7 +1059,6 @@
 
 
   DoubleT
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -862,7 +1068,6 @@
 
 
   DoubleLit
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -872,7 +1077,6 @@
 
 
   DoubleShow
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -882,7 +1086,6 @@
 
 
   TextT
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -892,8 +1095,6 @@
 
 
   TextLit
-  (shift [this diff var]
-    (map-chunks this (fn [c] (subst c diff var))))
   (subst [this var e]
     (map-chunks this (fn [c] (subst c var e))))
   (alphaNormalize [this]
@@ -914,10 +1115,6 @@
 
 
   TextAppend
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -943,7 +1140,6 @@
 
 
   ListT
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -953,14 +1149,6 @@
 
 
   ListLit
-  (shift [this diff var]
-    (let [type?  (:type? this)
-          exprs  (:exprs this)
-          type?' (when type? (shift type? diff var))
-          exprs' (mapv #(shift % diff var) exprs)]
-      (-> this
-         (assoc :type? type?'
-                :exprs exprs'))))
   (subst [this var e]
     (let [type?  (:type? this)
           exprs  (:exprs this)
@@ -981,10 +1169,6 @@
 
 
   ListAppend
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -1009,7 +1193,6 @@
 
 
   ListBuild
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1018,7 +1201,6 @@
 
 
   ListFold
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1027,7 +1209,6 @@
 
 
   ListLength
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1039,7 +1220,6 @@
 
 
   ListHead
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1053,7 +1233,6 @@
 
 
   ListLast
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1067,7 +1246,6 @@
 
 
   ListIndexed
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1076,7 +1254,6 @@
 
 
   ListReverse
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1090,7 +1267,6 @@
 
 
   OptionalT
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1100,12 +1276,6 @@
 
 
   OptionalLit
-  (shift [this diff var]
-    (let [val?  (:val? this)
-          val?' (when val? (shift val? diff var))]
-      (-> this
-         (update :type shift diff var)
-         (assoc :val? val?'))))
   (subst [this var e]
     (let [val?  (:val? this)
           val?' (when val? (subst val? var e))]
@@ -1125,7 +1295,6 @@
 
 
   OptionalFold
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1134,7 +1303,6 @@
 
 
   OptionalBuild
-  (shift [this diff var] this)
   (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
@@ -1143,8 +1311,6 @@
 
 
   RecordT
-  (shift [this diff var]
-    (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
   (subst [this var e]
     (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (alphaNormalize [this]
@@ -1156,8 +1322,6 @@
 
 
   RecordLit
-  (shift [this diff var]
-    (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
   (subst [this var e]
     (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (alphaNormalize [this]
@@ -1169,8 +1333,6 @@
 
 
   UnionT
-  (shift [this diff var]
-    (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
   (subst [this var e]
     (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (alphaNormalize [this]
@@ -1182,10 +1344,6 @@
 
 
   UnionLit
-  (shift [this diff var]
-    (-> this
-       (update :v shift diff var)
-       (update :kvs (fn [kvs] (map-vals #(shift % diff var) kvs)))))
   (subst [this var e]
     (-> this
        (update :v subst var e)
@@ -1203,10 +1361,6 @@
 
 
   Combine
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -1231,10 +1385,6 @@
 
 
   CombineTypes
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -1259,10 +1409,6 @@
 
 
   Prefer
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
@@ -1287,13 +1433,6 @@
 
 
   Merge
-  (shift [this diff var]
-    (let [type?  (:type? this)
-          type?' (when type? (shift type? diff var))]
-      (-> this
-         (update :a shift diff var)
-         (update :b shift diff var)
-         (assoc :type? type?'))))
   (subst [this var e]
     (let [type?  (:type? this)
           type?' (when type? (subst type? var e))]
@@ -1321,8 +1460,6 @@
 
 
   Constructors
-  (shift [this diff var]
-    (update this :e shift diff var))
   (subst [this var e]
     (update this :e subst var e))
   (alphaNormalize [this]
@@ -1342,8 +1479,6 @@
 
 
   Field
-  (shift [this diff var]
-    (update this :e shift diff var))
   (subst [this var e]
     (update this :e subst var e))
   (alphaNormalize [this]
@@ -1360,8 +1495,6 @@
 
 
   Project
-  (shift [this diff var]
-    (update this :e shift diff var))
   (subst [this var e]
     (update this :e subst var e))
   (alphaNormalize [this]
@@ -1379,10 +1512,6 @@
 
 
   ImportAlt
-  (shift [this diff var]
-    (-> this
-       (update :a shift diff var)
-       (update :b shift diff var)))
   (subst [this var e]
     (-> this
        (update :a subst var e)
