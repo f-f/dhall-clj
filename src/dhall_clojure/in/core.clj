@@ -5,9 +5,6 @@
 
 (defprotocol Expr
   "Interface that every Expression type should implement"
-  (subst [this var e]
-    "Substitute all occurrences of a variable with an expression
-    E.g. (subst this var e)  ~  this[var := e]")
   (alphaNormalize [this]
     "α-normalize an expression by renaming all variables to `_` and using
     De Bruijn indices to distinguish them")
@@ -30,6 +27,11 @@
     `diff` is always +1 or -1, because we either:
     * increment variables by `1` to avoid variable capture during substitution
     * decrement variables by `1` when deleting lambdas after substitution"))
+
+(defprotocol ISubst
+  (subst [this var e]
+    "Substitute all occurrences of a variable with an expression
+    E.g. (subst this var e)  ~  this[var := e]"))
 
 
 ;; All classes that form the expression tree follow
@@ -399,6 +401,288 @@
 
 
 
+;; Subst
+
+
+(extend-protocol ISubst
+
+  Const
+  (subst [this var e] this)
+
+  Var
+  (subst [this var e]
+    (if (= this var)
+      e
+      this))
+
+  Lam
+  (subst [this {:keys [x i] :as var} e]
+    (let [y (:arg this)
+          i' (if (= x y)
+               (inc i)
+               i)]
+      (-> this
+         (update :type subst var e)
+         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
+
+  Pi
+  (subst [this {:keys [x i] :as var} e]
+    (let [y (:arg this)
+          i' (if (= x y)
+               (inc i)
+               i)]
+      (-> this
+         (update :type subst var e)
+         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
+
+  App
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  Let
+  (subst [this {:keys [x i] :as var} e]
+    (let [y  (:label this)
+          i' (if (= x y)
+               (inc i)
+               i)
+          type?  (:type? this)
+          type?' (when type? (subst type? var e))]
+      (-> this
+         (assoc  :type? type?')
+         (update :body subst var e)
+         (update :next subst (->Var x i') (shift e 1 (->Var y 0))))))
+
+  Annot
+  (subst [this var e]
+    (-> this
+       (update :val  subst var e)
+       (update :type subst var e)))
+
+  BoolT
+  (subst [this var e] this)
+
+  BoolLit
+  (subst [this var e] this)
+
+  BoolAnd
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  BoolOr
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  BoolEQ
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  BoolNE
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  BoolIf
+  (subst [this var e]
+    (-> this
+       (update :test subst var e)
+       (update :then subst var e)
+       (update :else subst var e)))
+
+  NaturalT
+  (subst [this var e] this)
+
+  NaturalLit
+  (subst [this var e] this)
+
+  NaturalFold
+  (subst [this var e] this)
+
+  NaturalBuild
+  (subst [this var e] this)
+
+  NaturalIsZero
+  (subst [this var e] this)
+
+  NaturalEven
+  (subst [this var e] this)
+
+  NaturalOdd
+  (subst [this var e] this)
+
+  NaturalToInteger
+  (subst [this var e] this)
+
+  NaturalShow
+  (subst [this var e] this)
+
+  NaturalPlus
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  NaturalTimes
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  IntegerT
+  (subst [this var e] this)
+
+  IntegerLit
+  (subst [this var e] this)
+
+  IntegerShow
+  (subst [this var e] this)
+
+  IntegerToDouble
+  (subst [this var e] this)
+
+  DoubleT
+  (subst [this var e] this)
+
+  DoubleLit
+  (subst [this var e] this)
+
+  DoubleShow
+  (subst [this var e] this)
+
+  TextT
+  (subst [this var e] this)
+
+  TextLit
+  (subst [this var e]
+    (map-chunks this (fn [c] (subst c var e))))
+
+  TextAppend
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  ListT
+  (subst [this var e] this)
+
+  ListLit
+  (subst [{:keys [type? exprs] :as this} var e]
+    (-> this
+       (assoc :type? (when type? (subst type? var e))
+              :exprs (mapv #(subst % var e) exprs))))
+
+  ListAppend
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  ListBuild
+  (subst [this var e] this)
+
+  ListFold
+  (subst [this var e] this)
+
+  ListLength
+  (subst [this var e] this)
+
+  ListHead
+  (subst [this var e] this)
+
+  ListLast
+  (subst [this var e] this)
+
+  ListIndexed
+  (subst [this var e] this)
+
+  ListReverse
+  (subst [this var e] this)
+
+  OptionalT
+  (subst [this var e] this)
+
+  OptionalLit
+  (subst [{:keys [val?] :as this} var e]
+    (-> this
+       (update :type subst var e)
+       (assoc :val?  (when val? (subst val? var e)))))
+
+  OptionalFold
+  (subst [this var e] this)
+
+  OptionalBuild
+  (subst [this var e] this)
+
+  RecordT
+  (subst [this var e]
+    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
+
+  RecordLit
+  (subst [this var e]
+    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
+
+  UnionT
+  (subst [this var e]
+    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
+
+  UnionLit
+  (subst [this var e]
+    (-> this
+       (update :v subst var e)
+       (update :kvs (fn [kvs] (map-vals #(subst % var e) kvs)))))
+
+  Combine
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  CombineTypes
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  Prefer
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)))
+
+  Merge
+  (subst [{:keys [type?] :as this} var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e)
+       (assoc :type? (when type? (subst type? var e)))))
+
+  Constructors
+  (subst [this var e]
+    (update this :e subst var e))
+
+  Field
+  (subst [this var e]
+    (update this :e subst var e))
+
+  Project
+  (subst [this var e]
+    (update this :e subst var e))
+
+  ImportAlt
+  (subst [this var e]
+    (-> this
+       (update :a subst var e)
+       (update :b subst var e))))
+
+
 ;; Implementation of Expr interface
 
 
@@ -415,7 +699,6 @@
 (extend-protocol Expr
 
   Const
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck Const")
@@ -423,10 +706,6 @@
 
 
   Var
-  (subst [this var e]
-    (if (= this var)
-      e
-      this))
   (alphaNormalize [this] this)
   (normalize [this] this)
   (typecheck [this] "TODO typecheck Var")
@@ -434,14 +713,6 @@
 
 
   Lam
-  (subst [this {:keys [x i] :as var} e]
-    (let [y (:arg this)
-          i' (if (= x y)
-               (inc i)
-               i)]
-      (-> this
-         (update :type subst var e)
-         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
   (alphaNormalize [{:keys [arg type body] :as this}]
     (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
       (assoc this
@@ -460,14 +731,6 @@
 
 
   Pi
-  (subst [this {:keys [x i] :as var} e]
-    (let [y (:arg this)
-          i' (if (= x y)
-               (inc i)
-               i)]
-      (-> this
-         (update :type subst var e)
-         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
   (alphaNormalize [{:keys [arg type body] :as this}]
     (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
       (assoc this
@@ -486,10 +749,6 @@
 
 
   App
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -709,17 +968,6 @@
 
 
   Let
-  (subst [this {:keys [x i] :as var} e]
-    (let [y  (:label this)
-          i' (if (= x y)
-               (inc i)
-               i)
-          type?  (:type? this)
-          type?' (when type? (subst type? var e))]
-      (-> this
-         (assoc  :type? type?')
-         (update :body subst var e)
-         (update :next subst (->Var x i') (shift e 1 (->Var y 0))))))
   (alphaNormalize [{:keys [label type? body next] :as this}]
     (let [var (->Var label 0)
           v' (shift (->Var "_" 0) 1 var)]
@@ -742,10 +990,6 @@
 
 
   Annot
-  (subst [this var e]
-    (-> this
-       (update :val  subst var e)
-       (update :type subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :val  alphaNormalize)
@@ -756,7 +1000,6 @@
 
 
   BoolT
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -765,7 +1008,6 @@
 
 
   BoolLit
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]      (->BoolT))
@@ -773,10 +1015,6 @@
 
 
   BoolAnd
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -800,10 +1038,6 @@
 
 
   BoolOr
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -827,10 +1061,6 @@
 
 
   BoolEQ
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -848,10 +1078,6 @@
 
 
   BoolNE
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -869,11 +1095,6 @@
 
 
   BoolIf
-  (subst [this var e]
-    (-> this
-       (update :test subst var e)
-       (update :then subst var e)
-       (update :else subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :test alphaNormalize)
@@ -897,7 +1118,6 @@
 
 
   NaturalT
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -906,7 +1126,6 @@
 
 
   NaturalLit
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -915,7 +1134,6 @@
 
 
   NaturalFold
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck NaturalFold")
@@ -923,7 +1141,6 @@
 
 
   NaturalBuild
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck NaturalBuild")
@@ -931,7 +1148,6 @@
 
 
   NaturalIsZero
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -940,7 +1156,6 @@
 
 
   NaturalEven
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -949,7 +1164,6 @@
 
 
   NaturalOdd
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -958,7 +1172,6 @@
 
 
   NaturalToInteger
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -967,7 +1180,6 @@
 
 
   NaturalShow
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -976,10 +1188,6 @@
 
 
   NaturalPlus
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -999,10 +1207,6 @@
 
 
   NaturalTimes
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -1024,7 +1228,6 @@
 
 
   IntegerT
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1033,7 +1236,6 @@
 
 
   IntegerLit
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1042,7 +1244,6 @@
 
 
   IntegerShow
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1051,7 +1252,6 @@
 
 
   IntegerToDouble
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1059,7 +1259,6 @@
 
 
   DoubleT
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1068,7 +1267,6 @@
 
 
   DoubleLit
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1077,7 +1275,6 @@
 
 
   DoubleShow
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1086,7 +1283,6 @@
 
 
   TextT
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1095,8 +1291,6 @@
 
 
   TextLit
-  (subst [this var e]
-    (map-chunks this (fn [c] (subst c var e))))
   (alphaNormalize [this]
     (map-chunks this alphaNormalize))
   (normalize [this]
@@ -1115,10 +1309,6 @@
 
 
   TextAppend
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -1140,7 +1330,6 @@
 
 
   ListT
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1149,14 +1338,6 @@
 
 
   ListLit
-  (subst [this var e]
-    (let [type?  (:type? this)
-          exprs  (:exprs this)
-          type?' (when type? (subst type? var e))
-          exprs' (mapv #(subst % var e) exprs)]
-      (-> this
-         (assoc :type? type?'
-                :exprs exprs'))))
   (alphaNormalize [{:keys [type?] :as this}]
     (-> this
        (assoc :type?  (when type? (alphaNormalize type?)))
@@ -1169,10 +1350,6 @@
 
 
   ListAppend
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -1193,7 +1370,6 @@
 
 
   ListBuild
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck ListBuild")
@@ -1201,7 +1377,6 @@
 
 
   ListFold
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck ListFold")
@@ -1209,7 +1384,6 @@
 
 
   ListLength
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1220,7 +1394,6 @@
 
 
   ListHead
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1233,7 +1406,6 @@
 
 
   ListLast
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1246,7 +1418,6 @@
 
 
   ListIndexed
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck ListIndexed")
@@ -1254,7 +1425,6 @@
 
 
   ListReverse
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1267,7 +1437,6 @@
 
 
   OptionalT
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this]
@@ -1276,12 +1445,6 @@
 
 
   OptionalLit
-  (subst [this var e]
-    (let [val?  (:val? this)
-          val?' (when val? (subst val? var e))]
-      (-> this
-         (update :type subst var e)
-         (assoc :val? val?'))))
   (alphaNormalize [{:keys [val?] :as this}]
     (-> this
        (update :type alphaNormalize)
@@ -1295,7 +1458,6 @@
 
 
   OptionalFold
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck OptionalFold")
@@ -1303,7 +1465,6 @@
 
 
   OptionalBuild
-  (subst [this var e]    this)
   (alphaNormalize [this] this)
   (normalize [this]      this)
   (typecheck [this] "TODO typecheck OptionalBuild")
@@ -1311,8 +1472,6 @@
 
 
   RecordT
-  (subst [this var e]
-    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (alphaNormalize [this]
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
   (normalize [this]
@@ -1322,8 +1481,6 @@
 
 
   RecordLit
-  (subst [this var e]
-    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (alphaNormalize [this]
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
   (normalize [this]
@@ -1333,8 +1490,6 @@
 
 
   UnionT
-  (subst [this var e]
-    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
   (alphaNormalize [this]
     (update this :kvs (fn [kvs] (map-vals alphaNormalize kvs))))
   (normalize [this]
@@ -1344,10 +1499,6 @@
 
 
   UnionLit
-  (subst [this var e]
-    (-> this
-       (update :v subst var e)
-       (update :kvs (fn [kvs] (map-vals #(subst % var e) kvs)))))
   (alphaNormalize [this]
     (-> this
        (update :v alphaNormalize)
@@ -1361,10 +1512,6 @@
 
 
   Combine
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -1385,10 +1532,6 @@
 
 
   CombineTypes
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -1409,10 +1552,6 @@
 
 
   Prefer
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
@@ -1433,13 +1572,6 @@
 
 
   Merge
-  (subst [this var e]
-    (let [type?  (:type? this)
-          type?' (when type? (subst type? var e))]
-      (-> this
-         (update :a subst var e)
-         (update :b subst var e)
-         (assoc :type? type?'))))
   (alphaNormalize [{:keys [type?] :as this}]
     (-> this
        (update :a alphaNormalize)
@@ -1460,8 +1592,6 @@
 
 
   Constructors
-  (subst [this var e]
-    (update this :e subst var e))
   (alphaNormalize [this]
     (update this :e alphaNormalize))
   (normalize [this]
@@ -1479,8 +1609,6 @@
 
 
   Field
-  (subst [this var e]
-    (update this :e subst var e))
   (alphaNormalize [this]
     (update this :e alphaNormalize))
   (normalize [{:keys [e k] :as this}]
@@ -1495,8 +1623,6 @@
 
 
   Project
-  (subst [this var e]
-    (update this :e subst var e))
   (alphaNormalize [this]
     (update this :e alphaNormalize))
   (normalize [{:keys [e ks] :as this}]
@@ -1512,10 +1638,6 @@
 
 
   ImportAlt
-  (subst [this var e]
-    (-> this
-       (update :a subst var e)
-       (update :b subst var e)))
   (alphaNormalize [this]
     (-> this
        (update :a alphaNormalize)
