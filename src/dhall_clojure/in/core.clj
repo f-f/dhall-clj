@@ -423,7 +423,7 @@
                i)]
       (-> this
          (update :type subst var e)
-         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
+         (update :body subst (->Var x i') (shift e 1 (->Var y 0))))))
 
   Pi
   (subst [this {:keys [x i] :as var} e]
@@ -433,7 +433,7 @@
                i)]
       (-> this
          (update :type subst var e)
-         (update :body subst (->Var y i') (shift e 1 (->Var y 0))))))
+         (update :body subst (->Var x i') (shift e 1 (->Var y 0))))))
 
   App
   (subst [this var e]
@@ -442,15 +442,13 @@
        (update :b subst var e)))
 
   Let
-  (subst [this {:keys [x i] :as var} e]
-    (let [y  (:label this)
+  (subst [{:keys [label type?] :as this} {:keys [x i] :as var} e]
+    (let [y  label
           i' (if (= x y)
                (inc i)
-               i)
-          type?  (:type? this)
-          type?' (when type? (subst type? var e))]
+               i)]
       (-> this
-         (assoc  :type? type?')
+         (assoc  :type? (when type? (subst type? var e)))
          (update :body subst var e)
          (update :next subst (->Var x i') (shift e 1 (->Var y 0))))))
 
