@@ -180,7 +180,14 @@
               '(:c (select-keys foo [:a :b])))
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
-              '(or true false))])
+              '(or true false))
+   ;; Regressions
+   (Testcase. "1 + 2"
+              (->NaturalPlus (->NaturalLit 1) (->NaturalLit 2))
+              '(+ 1 2))
+   (Testcase. "Integer/show +3"
+              (->App (->IntegerShow) (->IntegerLit 3))
+              '(str 3))])
 
 
 (deftest simple-input-parsing

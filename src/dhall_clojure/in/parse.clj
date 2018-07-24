@@ -202,7 +202,9 @@
   (let [expr-constructor (symbol (str "->" record-class))]
     `(defmethod expr ~parser-tag [e#]
        (if (> (count (:c e#)) 1)
-         (let [exprs# (remove #(= ~separator-tag (:t %)) (:c e#))]
+         (let [exprs# (remove #(or (= ~separator-tag (:t %))
+                                   (= :whitespace-chunk (:t %)))
+                              (:c e#))]
            (loop [more# (nnext exprs#)
                   start# (~expr-constructor
                            (expr (first exprs#))
