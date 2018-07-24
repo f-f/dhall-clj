@@ -1,4 +1,4 @@
-(ns dhall-clojure.normalize-test
+(ns dhall-clojure.beta-normalize-test
   (:require  [clojure.test :refer :all]
              [medley.core :refer [map-vals]]
              [dhall-clojure.in.core :refer :all]
@@ -27,10 +27,8 @@
                  :expected (slurp expected)})
               map-of-testcases)))
 
-
 (deftest normalization-suite
   (doseq [[testcase {:keys [actual expected]}] (list-testcases)]
     (testing testcase
-      (let [actual'   (-> actual   parse expr alpha-normalize beta-normalize)
-            expected' (-> expected parse expr alpha-normalize beta-normalize)]
-        (is (= actual' expected'))))))
+      (is (= (-> actual   parse expr beta-normalize)
+             (-> expected parse expr beta-normalize))))))
