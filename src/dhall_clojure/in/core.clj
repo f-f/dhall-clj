@@ -1287,33 +1287,35 @@
 
   Lam
   (alpha-normalize [{:keys [arg type body] :as this}]
-    (let [v1 (shift (->Var "_" 0)
-                    1
-                    (->Var arg 0))
-          type' (alpha-normalize type)
-          body' (-> body
-                   (subst (->Var arg 0) v1)
-                   (shift -1 (->Var arg 0))
-                   (alpha-normalize))]
+    (let [var   (->Var arg 0)
+          v'    (->Var "_" 0)
+          body' (if (= arg "_")
+                  (alpha-normalize body)
+                  (-> body
+                     (shift 1 v')
+                     (subst var v')
+                     (shift -1 var)
+                     (alpha-normalize)))]
       (assoc this
-             :arg "_"
-             :type type'
+             :arg  "_"
+             :type (alpha-normalize type)
              :body body')))
   (typecheck [this] "TODO typecheck Lam")
 
   Pi
   (alpha-normalize [{:keys [arg type body] :as this}]
-    (let [v1 (shift (->Var "_" 0)
-                    1
-                    (->Var arg 0))
-          type' (alpha-normalize type)
-          body' (-> body
-                   (subst (->Var arg 0) v1)
-                   (shift -1 (->Var arg 0))
-                   (alpha-normalize))]
+    (let [var   (->Var arg 0)
+          v'    (->Var "_" 0)
+          body' (if (= arg "_")
+                  (alpha-normalize body)
+                  (-> body
+                     (shift 1 v')
+                     (subst var v')
+                     (shift -1 var)
+                     (alpha-normalize)))]
       (assoc this
-             :arg "_"
-             :type type'
+             :arg  "_"
+             :type (alpha-normalize type)
              :body body')))
   (typecheck [this] "TODO typecheck Lam")
 
@@ -1326,16 +1328,20 @@
 
   Let
   (alpha-normalize [{:keys [label type? body next] :as this}]
-    (let [var (->Var label 0)
-          v' (shift (->Var "_" 0) 1 var)]
+    (let [var   (->Var label 0)
+          v'    (->Var "_" 0)
+          next' (if (= label "_")
+                  (alpha-normalize next)
+                  (-> next
+                     (shift 1 v')
+                     (subst var v')
+                     (shift -1 var)
+                     (alpha-normalize)))]
       (assoc this
              :label "_"
              :type? (when type? (alpha-normalize type?))
              :body  (alpha-normalize body)
-             :next  (-> next
-                       (subst var v')
-                       (shift -1 var)
-                       alpha-normalize))))
+             :next  next')))
   (typecheck [this] "TODO typecheck Let")
 
   Annot
