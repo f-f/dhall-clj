@@ -14,23 +14,6 @@
 ;;    "Return a Clojure form from a Dhall expression"))
 
 
-(defprotocol IShift
-  (shift [this diff var]
-    "`shift` is used by both normalization and type-checking to avoid variable
-    capture by shifting variable indices.
-    `(shift e diff {:keys [i x]})` modifies the expression `e` by adding `diff`
-    to the indices of all variables named `x` whose indices are greater than
-    `(+ n m)`, where `m` is the number of bound variables of the same name
-    within that scope.
-    `diff` is always +1 or -1, because we either:
-    * increment variables by `1` to avoid variable capture during substitution
-    * decrement variables by `1` when deleting lambdas after substitution"))
-
-(defprotocol ISubst
-  (subst [this var e]
-    "Substitute all occurrences of a variable with an expression
-    E.g. (subst this var e)  ~  this[var := e]"))
-
 
 ;; All classes that form the expression tree follow
 ;;
@@ -119,6 +102,19 @@
 
 ;; Shift
 
+(defprotocol IShift
+  (shift [this diff var]
+    "`shift` is used by both normalization and type-checking to avoid variable
+    capture by shifting variable indices.
+    `(shift e diff {:keys [i x]})` modifies the expression `e` by adding `diff`
+    to the indices of all variables named `x` whose indices are greater than
+    `(+ n m)`, where `m` is the number of bound variables of the same name
+    within that scope.
+    `diff` is always +1 or -1, because we either:
+    * increment variables by `1` to avoid variable capture during substitution
+    * decrement variables by `1` when deleting lambdas after substitution"))
+
+
 (extend-protocol IShift
 
   Const
@@ -134,22 +130,22 @@
       (assoc this :i i'')))
 
   Lam
-  (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
+  (shift [{:keys [arg] :as this} diff {:keys [x i] :as var}]
     (let [i' (if (= x arg)
                (inc i)
-               i)
-          type' (shift type diff var)
-          body' (shift body diff (->Var x i'))]
-      (->Lam arg type' body')))
+               i)]
+      (-> this
+         (update :type shift diff var)
+         (update :body shift diff (assoc var :i i')))))
 
   Pi
-  (shift [{:keys [arg type body]} diff {:keys [x i] :as var}]
+  (shift [{:keys [arg] :as this} diff {:keys [x i] :as var}]
     (let [i' (if (= x arg)
                (inc i)
-               i)
-          type' (shift type diff var)
-          body' (shift body diff (->Var x i'))]
-      (->Pi arg type' body')))
+               i)]
+      (-> this
+         (update :type shift diff var)
+         (update :body shift diff (assoc var :i i')))))
 
   App
   (shift [this diff var]
@@ -158,14 +154,14 @@
        (update :b shift diff var)))
 
   Let
-  (shift [{:keys [label type? body next]} diff {:keys [x i] :as var}]
+  (shift [{:keys [label type?] :as this} diff {:keys [x i] :as var}]
     (let [i' (if (= x label)
                (inc i)
-               i)
-          type?' (when type? (shift type? diff var))
-          body'  (shift body diff var)
-          next'  (shift next diff (->Var x i'))]
-      (->Let label type?' body' next')))
+               i)]
+      (-> this
+         (assoc  :type? (when type? (shift type? diff var)))
+         (update :body shift diff var)
+         (update :next shift diff (assoc var :i i')))))
 
   Annot
   (shift [this diff var]
@@ -275,7 +271,7 @@
 
   TextLit
   (shift [this diff var]
-    (map-chunks this (fn [c] (subst c diff var))))
+    (map-chunks this (fn [c] (shift c diff var))))
 
   TextAppend
   (shift [this diff var]
@@ -401,6 +397,11 @@
 
 ;; Subst
 
+(defprotocol ISubst
+  (subst [this var e]
+    "Substitute all occurrences of a variable with an expression
+    E.g. (subst this var e)  ~  this[var := e]"))
+
 
 (extend-protocol ISubst
 
@@ -418,20 +419,22 @@
     (let [y (:arg this)
           i' (if (= x y)
                (inc i)
-               i)]
+               i)
+          e' (shift e 1 (->Var y 0))]
       (-> this
-         (update :type subst var e)
-         (update :body subst (->Var x i') (shift e 1 (->Var y 0))))))
+         (update :type subst var               e)
+         (update :body subst (assoc var :i i') e'))))
 
   Pi
   (subst [this {:keys [x i] :as var} e]
     (let [y (:arg this)
           i' (if (= x y)
                (inc i)
-               i)]
+               i)
+          e' (shift e 1 (->Var y 0))]
       (-> this
-         (update :type subst var e)
-         (update :body subst (->Var x i') (shift e 1 (->Var y 0))))))
+         (update :type subst var               e)
+         (update :body subst (assoc var :i i') e'))))
 
   App
   (subst [this var e]
@@ -693,7 +696,6 @@
   (let [ab-normalize (comp beta-normalize alpha-normalize)]
     (= (ab-normalize a)
        (ab-normalize b))))
-
 
 
 (extend-protocol IBetaNormalize
@@ -1138,9 +1140,9 @@
                      (and (instance? ListLit l)
                           (empty? l))            r
                      (and (instance? ListLit r)
-                          (empty?))              l
-                     (and (instance? TextLit l)
-                          (instance? TextLit r)) (update l :exprs concat (:exprs r))
+                          (empty? r))            l
+                     (and (instance? ListLit l)
+                          (instance? ListLit r)) (update l :exprs concat (:exprs r))
                      :else                       (->ListAppend l r)))]
       (decide (beta-normalize a) (beta-normalize b))))
 
@@ -1285,26 +1287,34 @@
 
   Lam
   (alpha-normalize [{:keys [arg type body] :as this}]
-    (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
+    (let [v1 (shift (->Var "_" 0)
+                    1
+                    (->Var arg 0))
+          type' (alpha-normalize type)
+          body' (-> body
+                   (subst (->Var arg 0) v1)
+                   (shift -1 (->Var arg 0))
+                   (alpha-normalize))]
       (assoc this
              :arg "_"
-             :type (alpha-normalize type)
-             :body (-> body
-                      (subst (->Var arg 0) v1)
-                      (shift -1 (->Var arg 0))
-                      (alpha-normalize)))))
+             :type type'
+             :body body')))
   (typecheck [this] "TODO typecheck Lam")
 
   Pi
   (alpha-normalize [{:keys [arg type body] :as this}]
-    (let [v1 (shift (->Var "_" 0) 1 (->Var arg 0))]
+    (let [v1 (shift (->Var "_" 0)
+                    1
+                    (->Var arg 0))
+          type' (alpha-normalize type)
+          body' (-> body
+                   (subst (->Var arg 0) v1)
+                   (shift -1 (->Var arg 0))
+                   (alpha-normalize))]
       (assoc this
              :arg "_"
-             :type (alpha-normalize type)
-             :body (-> body
-                      (subst (->Var arg 0) v1)
-                      (shift -1 (->Var arg 0))
-                      (alpha-normalize)))))
+             :type type'
+             :body body')))
   (typecheck [this] "TODO typecheck Lam")
 
   App
