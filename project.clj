@@ -16,6 +16,6 @@
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.10.0-alpha2"]]
                    :plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]]}
              :uberjar {:aot :all}}
-  :test-paths ["test" "src"]
+  :test-paths ["test"]
   :test-refresh {:quiet true
                  :changes-only true})
