@@ -9,8 +9,13 @@
   [[(alpha-normalize
       (->Lam "x" (->Const :type) (->Var "y" 0)))
     (->Lam "_" (->Const :type) (->Var "y" 0))]
-  ;;    λ(a : Type) → λ(b : Type) → λ(x : a) → λ(y : b) → x
-  ;; -> λ(_ : Type) → λ(_ : Type) → λ(_ : _@1) → λ(_ : _@1) → _@1
+   ;;    λ(x : Type) → _
+   ;; -> λ(_ : Type) → _@1
+   [(alpha-normalize
+      (->Lam "x" (->Const :type) (->Var "_" 0)))
+    (->Lam "_" (->Const :type) (->Var "_" 1))]
+   ;;    λ(a : Type) → λ(b : Type) → λ(x : a) → λ(y : b) → x
+   ;; -> λ(_ : Type) → λ(_ : Type) → λ(_ : _@1) → λ(_ : _@1) → _@1
    [(alpha-normalize
       (->Lam "a"
              (->Const :type)
