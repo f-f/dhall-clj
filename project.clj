@@ -7,6 +7,9 @@
                  [org.clojure/spec.alpha "0.1.143"]
                  [org.clojure/tools.reader "1.0.3"]
                  [org.clojure/core.match "0.3.0-alpha5"]
+                 [me.raynes/fs "1.4.6"]
+                 [lambdaisland/uri "1.1.0"]
+                 [clj-http "3.9.0"]
                  [medley "1.0.0"]
                  ^{:voom {:repo "https://github.com/f-f/instaparse" :branch "master"}}
                  [instaparse "1.4.8-20180320_231130-g3f0ce6d"]]
