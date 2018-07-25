@@ -71,6 +71,7 @@
                  :expected (slurp expected)})
               map-of-testcases)))
 
+#_
 (deftest normalization-suite
   (doseq [[testcase {:keys [actual expected]}] (list-testcases)]
     (testing testcase
