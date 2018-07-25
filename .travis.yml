@@ -1,8 +1,7 @@
 language: clojure
 install:
-  - lein voom install
   - lein voom build-deps
-  - lein deps
+  - lein voom install
   - lein --version
 jdk:
 - oraclejdk8
