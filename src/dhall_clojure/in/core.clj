@@ -1152,6 +1152,9 @@
   ListFold
   (beta-normalize [this] this)
 
+  ListLength
+  (beta-normalize [this] this)
+
   ListHead
   (beta-normalize [this] this)
 
@@ -1221,6 +1224,19 @@
                 (and (instance? RecordT l)
                      (instance? RecordT r)) (->RecordT (merge-with decide (:kvs l) (:kvs r)))
                 :else                       (->CombineTypes l r)))]
+      (decide (beta-normalize a) (beta-normalize b))))
+
+  Prefer
+  (beta-normalize [{:keys [a b]}]
+    (letfn [(decide [l r]
+              (cond
+                (and (instance? RecordLit l)
+                     (empty? l))              r
+                (and (instance? RecordLit r)
+                     (empty? r))              l
+                (and (instance? RecordLit l)
+                     (instance? RecordLit r)) (->RecordLit (merge (:kvs l) (:kvs r)))
+                :else                         (->Prefer l r)))]
       (decide (beta-normalize a) (beta-normalize b))))
 
   Merge
@@ -1631,17 +1647,6 @@
     (-> this
        (update :a alpha-normalize)
        (update :b alpha-normalize)))
-  (beta-normalize [{:keys [a b]}]
-    (letfn [(decide [l r]
-              (cond
-                (and (instance? RecordLit l)
-                     (empty? l))              r
-                (and (instance? RecordLit r)
-                     (empty? r))              l
-                (and (instance? RecordLit l)
-                     (instance? RecordLit r)) (->RecordLit (merge (:kvs l) (:kvs r)))
-                :else                         (->Prefer l r)))]
-      (decide (beta-normalize a) (beta-normalize b))))
   (typecheck [this] "TODO typecheck Prefer")
 
   Merge
