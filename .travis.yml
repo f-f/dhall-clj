@@ -1,8 +1,8 @@
 language: clojure
 install:
-  - lein voom install
+  - echo '{:user {:plugins [[lein-voom "0.1.0-20180617_140646-g0ba7ec8"]]}}' > ~/.lein/profiles.clj
   - lein voom build-deps
-  - lein deps
+  - lein voom install
   - lein --version
 jdk:
 - oraclejdk8
