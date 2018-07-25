@@ -1,6 +1,6 @@
 language: clojure
 install:
-  - echo '{:user {:profiles [[lein-voom "0.1.0-20180617_140646-g0ba7ec8"]]}}' > ~/.lein/profiles.clj
+  - echo '{:user {:plugins [[lein-voom "0.1.0-20180617_140646-g0ba7ec8"]]}}' > ~/.lein/profiles.clj
   - lein voom build-deps
   - lein voom install
   - lein --version
