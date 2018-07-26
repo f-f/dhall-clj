@@ -3,6 +3,20 @@
             [clojure.string :as string]
             [instaparse.core :as insta]))
 
+
+;; Imports data structures
+
+(defrecord Import [type   ;; :local, :remote, :env, :missing
+                   hash?  ;; maybe a sha256 in hex
+                   mode   ;; :code or :text
+                   data]) ;; the actual import, records defined below
+
+(defrecord Local [prefix directory file])
+(defrecord Remote [url headers?])
+(defrecord Env [name])
+(defrecord Missing [])
+
+
 (defn error [context data]
   (do (println (str "Failed match: " context))
       data))

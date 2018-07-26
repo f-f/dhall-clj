@@ -1,6 +1,7 @@
 (ns dhall-clojure.parse-test
   (:require [clojure.test :refer :all]
             [dhall-clojure.in.core :refer :all]
+            [dhall-clojure.in.import :as imp]
             [dhall-clojure.in.parse :refer [parse expr]]
             [dhall-clojure.core :refer [input]]))
 
@@ -181,6 +182,19 @@
    (Testcase. "True || False"
               (->BoolOr (->BoolLit true) (->BoolLit false))
               '(or true false))
+   ;; Imports
+   (Testcase. "env:TEST sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 as Text"
+              (imp/map->Import {:mode :text
+                                :type :env
+                                :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                                :data (imp/->Env "TEST")})
+              nil) ;; TODO
+   (Testcase. "env:\"TE\\\"ST\" sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+              (imp/map->Import {:mode :code
+                                :type :env
+                                :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+                                :data (imp/->Env "TE\\\"ST")})
+              nil) ;; TODO
    ;; Regressions
    (Testcase. "1 + 2"
               (->NaturalPlus (->NaturalLit 1) (->NaturalLit 2))
@@ -195,7 +209,7 @@
     (testing (str "Correct Expr Tree for Dhall expr: " dhall)
       ;(println tree)
       ;(println (-> dhall parse expr))
-      (is (.equals (-> dhall parse expr) tree)))))
+      (is (= (-> dhall parse expr) tree)))))
 
 (def parser-suite-results
   [])  ;; TODO: implement forms and add results here

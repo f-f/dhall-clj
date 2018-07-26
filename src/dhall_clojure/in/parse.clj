@@ -1,7 +1,9 @@
 (ns dhall-clojure.in.parse
   (:require [instaparse.core :as insta]
             [clojure.java.io :as io]
-            [dhall-clojure.in.core :refer :all]))
+            [dhall-clojure.in.core :refer :all]
+            [dhall-clojure.in.import :as imp]
+            [clojure.string :as str]))
 
 (def grammar (slurp (io/resource "dhall.abnf")))
 
@@ -51,14 +53,17 @@
 ;;
 ;; Parse Tree -> Expression Tree
 ;;
+
 (defmulti expr
   "Takes an enlive parse tree, and constructs a tree of
   objects implementing IExpr"
   :t)
 
+
 ;;
 ;; Rules that we eliminate as not needed
 ;;
+
 (defmethod expr :complete-expression [e]
   (expr (-> e :c second)))
 
@@ -68,9 +73,44 @@
 (defmethod expr :import-expression [e]
   (first-child-expr e))
 
+
 ;;
-;; Useful rules start here
+;; Import rules
 ;;
+
+(defmethod expr :import [{:keys [c]}]
+  (let [import (expr (first c))
+        mode (if (> (count c) 1) ;; If yes, we have a "as Text"
+               ;; FIXME: other imports modes go here, maybe make it more robust
+               :text
+               :code)]
+    (assoc import :mode mode)))
+
+(defmethod expr :import-hashed [{:keys [c]}]
+  (let [import (expr (first c))
+        hash?  (when (> (count c) 1) ;; If yes, we have a hash
+                 (expr (second c)))]
+    (assoc import :hash? hash?)))
+
+(defmethod expr :hash [{:keys [c]}]
+  (-> c
+     (compact)
+     (subs 7) ;; Cut the "sha256:" prefix here
+     (str/trim)))
+
+(defmethod expr :import-type [{:keys [c]}]
+  (-> c first expr))
+
+(defmethod expr :env [{:keys [c]}]
+  (let [envname (compact (nth c (if (string? (second c)) 2 1)))
+        env (imp/->Env envname)]
+    (imp/map->Import {:type :env
+                      :data env})))
+
+;;
+;; Useful rules that parse the pure subset of the language
+;;
+
 (defmethod expr :expression [{:keys [c t]}]
   (let [first-tag (-> c first :t)]
     (case first-tag
@@ -137,7 +177,8 @@
       :True-raw     (->BoolLit true)
       :False-raw    (->BoolLit false)
       :Type-raw     (->Const :type)
-      :Kind-raw     (->Const :kind))))
+      :Kind-raw     (->Const :kind)
+      :missing-raw  (imp/->Import :missing nil :code (imp/->Missing)))))
 
 (defmethod expr :reserved-namespaced-raw [e]
   (let [first-tag (-> e :c first :t)]
@@ -244,9 +285,6 @@
           (recur (rest more)
                  (->App app (expr (first more)))))))
     (expr (-> c first))))
-
-(defmethod expr :import [e]
-  e) ;; TODO
 
 (defmethod expr :selector-expression [e]
   (if (children? e)
