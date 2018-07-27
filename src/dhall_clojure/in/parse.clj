@@ -107,6 +107,23 @@
     (imp/map->Import {:type :env
                       :data env})))
 
+(defmethod expr :local [{:keys [c]}]
+  (let [raw-c (-> c first :c)
+        relative? (string? (first raw-c))
+        prefix (when relative?
+                 (first raw-c))
+        compact-path-component #(-> % :c rest compact)
+        directory (->> (nth raw-c (if relative? 1 0))
+                     :c
+                     (map compact-path-component))
+        file (-> raw-c
+                (nth (if relative? 2 1))
+                :c first
+                compact-path-component)
+        local (imp/->Local prefix directory file)]
+    (imp/map->Import {:type :local
+                      :data local})))
+
 ;;
 ;; Useful rules that parse the pure subset of the language
 ;;

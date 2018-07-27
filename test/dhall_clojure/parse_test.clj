@@ -191,6 +191,38 @@
                       :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
                       :data (imp/->Env "TE\\\"ST")})]
 
+   ["./relative.dhall"
+    (imp/map->Import {:mode :code
+                      :type :local
+                      :hash? nil
+                      :data (imp/map->Local {:directory '()
+                                             :file "relative.dhall"
+                                             :prefix "."})})]
+
+   ["/absolute/file"
+    (imp/map->Import {:mode :code
+                      :type :local
+                      :hash? nil
+                      :data (imp/map->Local {:directory '("absolute")
+                                             :file "file"
+                                             :prefix nil})})]
+
+   ["../../parent/file.dhall"
+    (imp/map->Import {:mode :code
+                      :type :local
+                      :hash? nil
+                      :data (imp/map->Local {:directory '(".." "parent")
+                                             :file "file.dhall"
+                                             :prefix ".."})})]
+
+   ["~/.env"
+    (imp/map->Import {:mode :code
+                      :type :local
+                      :hash? nil
+                      :data (imp/map->Local {:directory '()
+                                             :file ".env"
+                                             :prefix "~"})})]
+
    ;; Regressions
    ["1 + 2"
     (->NaturalPlus (->NaturalLit 1) (->NaturalLit 2))]
