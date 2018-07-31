@@ -10,6 +10,8 @@
                  [me.raynes/fs "1.4.6"]
                  [lambdaisland/uri "1.1.0"]
                  [clj-http "3.9.0"]
+                 [cc.qbits/ex "0.1.2"]
+                 [com.gfredericks/catch-data "0.2.0"]
                  [medley "1.0.0"]
                  ^{:voom {:repo "https://github.com/f-f/instaparse" :branch "master"}}
                  [instaparse "1.4.8-20180320_231130-g3f0ce6d"]]

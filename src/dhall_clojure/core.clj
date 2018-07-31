@@ -1,5 +1,6 @@
 (ns dhall-clojure.core
-  (:require [dhall-clojure.in.parse :refer [parse]]
+  (:require [dhall-clojure.in.parse :refer [parse expr]]
+            [dhall-clojure.in.core :refer [beta-normalize]]
             [dhall-clojure.in.emit :refer [emit]]))
 
 
@@ -8,12 +9,18 @@
   and return a Clojure form conformed to the spec.
   When no spec is given, still runs the Dhall typechecker,
   but doesn't conform to a spec."
-  ;; TODO: Handle this case
-  ([expr] (input nil expr))
-  ([spec expr]
-   (some-> expr
-           parse)))  ;; Dhall  -> ParseTree
-           ;; TODO: resolve imports
-           ;; TODO: typecheck
-           ;; TODO: normalize
-           ;;emit)))  ;; ParseTree -> Clojure
+  ([dhall-code] (input nil dhall-code)) ;; TODO handle this case
+  ([spec dhall-code] ;; TODO actually conform
+   (emit (input-ast dhall-code))))
+
+(defn input-ast
+  "Given a string containing Dhall code, parses, typechecks,
+  and normalizes it, returning an AST.
+  Will throw exceptions in case of failure."
+  [dhall-code]
+  (let [parse-tree (parse dhall-code)
+        ast        (expr parse-tree)
+        ;; ast        (resolve-imports ast)
+        ;; type       (typecheck ast)
+        ast        (beta-normalize ast)]
+    ast))
