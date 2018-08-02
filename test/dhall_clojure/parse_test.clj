@@ -1,5 +1,6 @@
 (ns dhall-clojure.parse-test
   (:require [clojure.test :refer :all]
+            [lambdaisland.uri :refer [uri]]
             [dhall-clojure.in.core :refer :all]
             [dhall-clojure.in.import :as imp]
             [dhall-clojure.in.parse :refer [parse expr]]))
@@ -222,6 +223,60 @@
                       :data (imp/map->Local {:directory '()
                                              :file ".env"
                                              :prefix "~"})})]
+
+   ["https://localhost/file using ./headers"
+    (imp/map->Import
+      {:mode :code
+       :type :remote
+       :hash? nil
+       :data (imp/map->Remote {:headers? (imp/map->Import
+                                           {:data (imp/map->Local {:directory ()
+                                                                   :file "headers"
+                                                                   :prefix "."})
+                                            :hash? nil
+                                            :mode :code
+                                            :type :local})
+                               :url (uri "https://localhost/file")})})]
+
+   ["https://localhost/file using (./headers)"
+    (imp/map->Import
+      {:mode :code
+       :type :remote
+       :hash? nil
+       :data (imp/map->Remote {:headers? (imp/map->Import
+                                           {:data (imp/map->Local {:directory ()
+                                                                   :file "headers"
+                                                                   :prefix "."})
+                                            :hash? nil
+                                            :mode :code
+                                            :type :local})
+                               :url (uri "https://localhost/file")})})]
+
+   ["https://localhost/file"
+    (imp/map->Import
+      {:mode :code
+       :type :remote
+       :hash? nil
+       :data (imp/map->Remote {:headers? nil
+                               :url (uri "https://localhost/file")})})]
+
+   ["https://user:pass:more@localhost:8888/file?test#aaaa"
+    (imp/map->Import
+      {:mode :code
+       :type :remote
+       :hash? nil
+       :data (imp/map->Remote
+               {:headers? nil
+                :url (uri "https://user:pass:more@localhost:8888/file?test#aaaa")})})]
+
+   ["http://user@example.com/some/file.dhall"
+    (imp/map->Import
+      {:mode :code
+       :type :remote
+       :hash? nil
+       :data (imp/map->Remote
+               {:headers? nil
+                :url (uri "http://user@example.com/some/file.dhall")})})]
 
    ;; Regressions
    ["1 + 2"

@@ -1,6 +1,7 @@
 (ns dhall-clojure.in.parse
   (:require [instaparse.core :as insta]
             [clojure.java.io :as io]
+            [lambdaisland.uri :refer [uri join]]
             [dhall-clojure.in.core :refer :all]
             [dhall-clojure.in.import :as imp]
             [dhall-clojure.in.fail :as fail]
@@ -136,7 +137,56 @@
                       :data local})))
 
 (defmethod expr :http [{:keys [c]}]
-  {:a c})
+  (let [headers? (case (count c)
+                   4   (-> c (nth 3) expr)
+                   6   (-> c (nth 4) expr)
+                   nil)
+        headers? (when headers?
+                   (assoc headers? :mode :code)) ;; FIXME: we should have a smart constructor
+        remote (imp/map->Remote
+                 {:url      (-> c first expr)
+                  :headers? headers?})]
+    (imp/map->Import {:type :remote
+                      :data remote})))
+
+(defmethod expr :http-raw [{:keys [c]}]
+  (let [compact-next (fn [char coll]
+                       (some->>
+                         coll
+                         (partition 2 1)
+                         (filter (fn [[a b]] (= char a)))
+                         (first)
+                         (second)
+                         (compact)))
+        base     (uri "")
+        scheme   (-> c first compact)
+        query    (compact-next "?" c)
+        fragment (compact-next "#" c)
+
+        host      (-> c (nth 2) :c)
+        port      (compact-next ":" host)
+        userinfo? (= "@" (second host))
+        authority (-> host
+                     (nth (if userinfo? 2 0))
+                     compact)
+        [user password] (when userinfo?
+                          ((juxt (partial take-while (partial not= ":"))
+                                 (partial drop-while (partial not= ":")))
+                           (-> host first :c)))
+        user     (when (seq user)     (compact user))
+        password (when (seq password) (compact (rest password)))
+        path (str (-> c (nth 3) compact)
+                  (-> c (nth 4) compact))]
+    (assoc base
+           :scheme scheme
+           :host authority
+           :user user
+           :password password
+           :path path
+           :port port
+           :query query
+           :fragment fragment)))
+
 
 ;;
 ;; Useful rules that parse the pure subset of the language
