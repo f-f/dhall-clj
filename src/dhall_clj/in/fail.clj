@@ -1,4 +1,4 @@
-(ns dhall-clojure.in.fail
+(ns dhall-clj.in.fail
   (:require [com.gfredericks.catch-data :refer [throw-data]]
             [qbits.ex :as ex]))
 
@@ -23,3 +23,6 @@
     {:tree tree
      :unmatched (:t tree)
      :tree-printed (pr-str tree)}))
+
+
+;; Import

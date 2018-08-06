@@ -1,6 +1,6 @@
-(ns dhall-clojure.in.emit
+(ns dhall-clj.in.emit
   (:require [clojure.string :as string]
-            [dhall-clojure.in.core :refer :all]))
+            [dhall-clj.ast :refer :all]))
 
 
 (defprotocol IEmit

@@ -1,7 +1,7 @@
-(ns dhall-clojure.core
-  (:require [dhall-clojure.in.parse :refer [parse expr]]
-            [dhall-clojure.in.core :refer [beta-normalize]]
-            [dhall-clojure.in.emit :refer [emit]]))
+(ns dhall-clj.core
+  (:require [dhall-clj.in.parse :refer [parse expr]]
+            [dhall-clj.ast :refer [beta-normalize]]
+            [dhall-clj.in.emit :refer [emit]]))
 
 
 (defn input

@@ -1,7 +1,8 @@
-(ns dhall-clojure.in.core
+(ns dhall-clj.ast
   (:require [medley.core :refer [map-vals]]
             [clojure.string :as str]
-            [clojure.pprint :refer [pprint]]))
+            [clojure.pprint :refer [pprint]])
+  (:gen-class))
 
 (defprotocol Expr
   "Interface that every Expression type should implement"

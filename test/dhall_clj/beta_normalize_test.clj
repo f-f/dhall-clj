@@ -1,8 +1,8 @@
-(ns dhall-clojure.beta-normalize-test
+(ns dhall-clj.beta-normalize-test
   (:require  [clojure.test :refer :all]
              [medley.core :refer [map-vals]]
-             [dhall-clojure.in.core :refer :all]
-             [dhall-clojure.in.parse :refer [parse expr]]))
+             [dhall-clj.ast :refer :all]
+             [dhall-clj.in.parse :refer [parse expr]]))
 
 ;; Simple tests from the spec
 

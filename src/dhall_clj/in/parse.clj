@@ -1,10 +1,10 @@
-(ns dhall-clojure.in.parse
+(ns dhall-clj.in.parse
   (:require [instaparse.core :as insta]
             [clojure.java.io :as io]
             [lambdaisland.uri :refer [uri join]]
-            [dhall-clojure.in.core :refer :all]
-            [dhall-clojure.in.import :as imp]
-            [dhall-clojure.in.fail :as fail]
+            [dhall-clj.ast :refer :all]
+            [dhall-clj.in.import :as imp]
+            [dhall-clj.in.fail :as fail]
             [clojure.string :as str]))
 
 (def grammar
@@ -18,7 +18,7 @@
                 :start :complete-expression
                 :output-format :enlive))
 
-(defn- clean
+(defn clean
   "Cut the names of the attrs of the tree
   TODO: save the meta!"
   [tree]

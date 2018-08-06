@@ -1,4 +1,4 @@
-(ns dhall-clojure.emit-test
+(ns dhall-clj.emit-test
   (:require  [clojure.test :refer :all]))
 
 

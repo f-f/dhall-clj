@@ -1,9 +1,9 @@
-(ns dhall-clojure.parse-test
+(ns dhall-clj.parse-test
   (:require [clojure.test :refer :all]
             [lambdaisland.uri :refer [uri]]
-            [dhall-clojure.in.core :refer :all]
-            [dhall-clojure.in.import :as imp]
-            [dhall-clojure.in.parse :refer [parse expr]]))
+            [dhall-clj.ast :refer :all]
+            [dhall-clj.in.import :as imp]
+            [dhall-clj.in.parse :refer [parse expr]]))
 
 (def cases
   [["2.0"

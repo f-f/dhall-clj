@@ -1,6 +1,6 @@
-(ns dhall-clojure.alpha-normalize-test
+(ns dhall-clj.alpha-normalize-test
   (:require [clojure.test :refer :all]
-            [dhall-clojure.in.core :refer :all]))
+            [dhall-clj.ast :refer :all]))
 
 (def anormalize-cases
   "These tests come from the `α-normalization` section of the standard"

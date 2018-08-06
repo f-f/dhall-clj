@@ -1,6 +1,6 @@
-(ns dhall-clojure.core-test
+(ns dhall-clj.ast-test
   (:require [clojure.test :refer :all]
-            [dhall-clojure.in.core :refer :all]))
+            [dhall-clj.ast :refer :all]))
 
 (def shift-cases
   "These tests come from the `Shift` section of the standard"
