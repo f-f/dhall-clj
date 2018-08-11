@@ -113,6 +113,9 @@
 (defmethod expr :import-type [{:keys [c]}]
   (-> c first expr))
 
+(defmethod expr :missing [_]
+  (imp/->Import :missing nil :code (imp/->Missing)))
+
 (defmethod expr :env [{:keys [c]}]
   (let [envname (compact (nth c (if (string? (second c)) 2 1)))
         env (imp/->Env envname)]
@@ -258,8 +261,7 @@
       :True-raw     (->BoolLit true)
       :False-raw    (->BoolLit false)
       :Type-raw     (->Const :type)
-      :Kind-raw     (->Const :kind)
-      :missing-raw  (imp/->Import :missing nil :code (imp/->Missing)))))
+      :Kind-raw     (->Const :kind))))
 
 (defmethod expr :reserved-namespaced-raw [e]
   (let [first-tag (-> e :c first :t)]
