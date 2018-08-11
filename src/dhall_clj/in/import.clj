@@ -1,6 +1,8 @@
 (ns dhall-clj.in.import
   (:require [dhall-clj.ast :refer :all]
-            [medley.core :refer [map-vals]]))
+            [medley.core :refer [map-vals]]
+            [digest :refer [sha-256]]
+            [dhall-clj.in.fail :as fail]))
 
 
 ;; Imports data structures
@@ -16,38 +18,64 @@
 (defrecord Missing [])
 
 
-(defn error [context data]
-  (do (println (str "Failed match: " context))
-      data))
+;; Cache
 
 (defn new-cache
+  "Creates a new cache atom.
+  The `:raw` cache has the path of the import as key, and the raw text
+  of the expression as value.
+  The `:ast` cache has the hashed raw-text as key, and the resolved
+  and normalized AST as value, so we don't have to re-evaluate things."
   []
-  (atom {:env  {}
-         :http {}
-         :path {}}))
+  (atom {:import {}
+         :ast    {}}))
 
-(defn cache-path [cache path]
-  (let [new (swap!
-              cache
-              (fn [c p]
-                (if (get-in c [:path path])
-                  c
-                  (assoc-in c [:path path] path))) ;;(slurp path))))
-              path)]
-    (get-in new [:path path])))
+(defmacro with-cache
+  "Given a cache, a key vector and a body to compute it its value,
+  returns the cached result or performs the computation and caches it.
+  Do not use directly, see `with-import-cache` and `with-ast-cache`"
+  [cache path body]
+  (let [cache' cache]
+    `(let [new# (swap! ~cache'
+                       (fn [c#]
+                         (if (get-in c# ~path)
+                           c#
+                           (assoc-in c# ~path ~body))))]
+       (get-in new# ~path))))
 
+(defmacro with-import-cache
+  "Given a cache, an import name, and a body to compute it,
+  performs the side-effecting body to resolve the import,
+  or returns the cached if already resolved."
+  [cache path body]
+  `(with-cache ~cache [:import ~path] ~body))
 
-
+;;
+;; Resolving imports
+;;
 
 (defprotocol IResolve
   (resolve-imports [this cache]
     "`resolve-imports` will fetch, verify and cache imports embedded in
     the Expression.
-    Will throw an exception (of the `:dhall-clojure.in.fail/parse` family)
+    Will throw an exception (of the `:dhall-clj.in.fail/parse` family)
     in case it cannot resolve some expression."))
 
 
 (extend-protocol IResolve
+  Env
+  (resolve-imports [{:keys [name]} cache]
+    (with-cache
+      cache
+      name
+      (if-let [env (System/getenv name)]
+        env
+        (fail/missing-env! name))))
+
+  Import
+  (resolve-imports [{:keys [type hash? mode data]} cache]
+    (resolve-imports data cache)) ;; TODO hash, mode, actually parsing + typecheck + normalize
+
   dhall_clj.ast.ImportAlt
   (resolve-imports [this cache]
     this) ;; TODO

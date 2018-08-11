@@ -26,3 +26,9 @@
 
 
 ;; Import
+(defn missing-env!
+  "Throws an ex-info from a missing environment variable"
+  [name]
+  (throw-data
+    "Missing environment variable: `%name~s`"
+    {:name name}))

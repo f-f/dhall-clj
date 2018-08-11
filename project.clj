@@ -8,6 +8,7 @@
                  [org.clojure/tools.reader "1.0.3"]
                  [org.clojure/core.match "0.3.0-alpha5"]
                  [me.raynes/fs "1.4.6"]
+                 [digest "1.4.8"]
                  [lambdaisland/uri "1.1.0"]
                  [clj-http "3.9.0"]
                  [cc.qbits/ex "0.1.2"]
