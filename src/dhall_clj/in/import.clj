@@ -63,6 +63,10 @@
 
 
 (extend-protocol IResolve
+  Missing
+  (resolve-imports [_this cache]
+    (fail/missing-keyword!))
+
   Env
   (resolve-imports [{:keys [name]} cache]
     (with-cache
