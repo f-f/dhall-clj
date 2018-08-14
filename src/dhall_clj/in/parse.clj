@@ -130,7 +130,8 @@
         compact-path-component #(-> % :c rest compact)
         directory (->> (nth raw-c (if relative? 1 0))
                      :c
-                     (map compact-path-component))
+                     (map compact-path-component)
+                     reverse) ;; Yes, we store the path components reversed
         file (-> raw-c
                 (nth (if relative? 2 1))
                 :c first

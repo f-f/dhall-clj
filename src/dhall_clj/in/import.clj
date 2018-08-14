@@ -50,6 +50,33 @@
   [cache path body]
   `(with-cache ~cache [:import ~path] ~body))
 
+
+;;
+;; Canonicalize imports
+;;
+
+(defn canonicalize-dir [directory]
+  (cond
+    (empty? directory)         directory
+    (= "."  (first directory)) (canonicalize-dir (rest directory))
+    (= ".." (first directory)) (let [comps (canonicalize-dir (rest directory))]
+                                 (cond
+                                   (empty? comps)         '("..")
+                                   (= ".." (first comps)) (conj comps "..")
+                                   :else                  (rest comps)))
+    :else                      (conj (canonicalize-dir (rest directory))
+                                     (first directory))))
+
+(defprotocol ICanonicalize
+  (canonicalize [this]
+    "`canonicalize` will normalize the path position of directories"))
+
+(extend-protocol ICanonicalize
+  Local
+  (canonicalize [this]
+    (update this :directory canonicalize-dir)))
+
+
 ;;
 ;; Resolving imports
 ;;
@@ -58,7 +85,7 @@
   (resolve-imports [this cache]
     "`resolve-imports` will fetch, verify and cache imports embedded in
     the Expression.
-    Will throw an exception (of the `:dhall-clj.in.fail/parse` family)
+    Will throw an exception (of the `:dhall-clj.in.fail/imports` family)
     in case it cannot resolve some expression."))
 
 
@@ -78,7 +105,16 @@
 
   Import
   (resolve-imports [{:keys [type hash? mode data]} cache]
-    (resolve-imports data cache)) ;; TODO hash, mode, actually parsing + typecheck + normalize
+    (let [raw (resolve-imports data cache)
+          ;; TODO check + cache hashed stuff
+          ast (if (= mode :code)
+                (-> raw parse expr)
+                (->TextLit [raw]))]
+          ;; TODO recursively resolve imports
+          ;; TODO check for cycles
+          ;; TODO check for referentiallyopaque once we import http
+          ;; TODO typecheck + normalize
+      ast))
 
   dhall_clj.ast.ImportAlt
   (resolve-imports [this cache]
