@@ -4,15 +4,6 @@
             [dhall-clj.in.emit :refer [emit]]))
 
 
-(defn input
-  "Given a spec and a Dhall expression, parse the expression
-  and return a Clojure form conformed to the spec.
-  When no spec is given, still runs the Dhall typechecker,
-  but doesn't conform to a spec."
-  ([dhall-code] (input nil dhall-code)) ;; TODO handle this case
-  ([spec dhall-code] ;; TODO actually conform
-   (emit (input-ast dhall-code))))
-
 (defn input-ast
   "Given a string containing Dhall code, parses, typechecks,
   and normalizes it, returning an AST.
@@ -24,3 +15,14 @@
         ;; type       (typecheck ast)
         ast        (beta-normalize ast)]
     ast))
+
+
+(defn input
+  "Given a spec and a Dhall expression, parse the expression
+  and return a Clojure form conformed to the spec.
+  When no spec is given, still runs the Dhall typechecker,
+  but doesn't conform to a spec."
+  ([dhall-code] (input nil dhall-code)) ;; TODO handle this case
+  ([spec dhall-code] ;; TODO actually conform
+   (emit (input-ast dhall-code))))
+

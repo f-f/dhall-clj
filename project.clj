@@ -17,6 +17,7 @@
                  ^{:voom {:repo "https://github.com/f-f/instaparse" :branch "master"}}
                  [instaparse "1.4.8-20180320_231130-g3f0ce6d"]]
   :plugins [[lein-shell "0.5.0"]
+            [lein-cloverage "1.0.11"]
             [lein-voom "0.1.0-20180617_140646-g0ba7ec8"]]
   :prep-tasks [["shell" "cp" "dhall-lang/standard/dhall.abnf" "resources/"] "javac" "compile"]
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.10.0-alpha2"]]

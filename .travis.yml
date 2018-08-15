@@ -1,8 +1,16 @@
+sudo: false
 language: clojure
+lein: 2.7.1
 install:
   - echo '{:user {:plugins [[lein-voom "0.1.0-20180617_140646-g0ba7ec8"]]}}' > ~/.lein/profiles.clj
   - lein voom build-deps
   - lein voom install
   - lein --version
+script:
+  - lein test
+  - ./submit-coveralls.sh
 jdk:
-- oraclejdk8
+  - oraclejdk8
+cache:
+  directories:
+    - "$HOME/.m2"
