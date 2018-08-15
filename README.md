@@ -1,6 +1,6 @@
-# dhall-clojure
+# dhall-clj
 
-[![Build Status](https://travis-ci.org/f-f/dhall-clojure.svg?branch=master)](https://travis-ci.org/f-f/dhall-clojure)
+[![Build Status](https://travis-ci.org/f-f/dhall-clj.svg?branch=master)](https://travis-ci.org/f-f/dhall-clj)
 
 Compiler from Dhall to Clojure and viceversa.
 
