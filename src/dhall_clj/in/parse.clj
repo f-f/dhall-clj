@@ -3,7 +3,6 @@
             [clojure.java.io :as io]
             [lambdaisland.uri :refer [uri join]]
             [dhall-clj.ast :refer :all]
-            [dhall-clj.in.import :as imp]
             [dhall-clj.in.fail :as fail]
             [clojure.string :as str]))
 
@@ -114,13 +113,14 @@
   (-> c first expr))
 
 (defmethod expr :missing [_]
-  (imp/->Import :missing nil :code (imp/->Missing)))
+  (->Import :missing nil :code (->Missing)))
 
 (defmethod expr :env [{:keys [c]}]
   (let [envname (compact (nth c (if (string? (second c)) 2 1)))
-        env (imp/->Env envname)]
-    (imp/map->Import {:type :env
-                      :data env})))
+        env (->Env envname)]
+    (map->Import
+      {:type :env
+       :data env})))
 
 (defmethod expr :local [{:keys [c]}]
   (let [raw-c (-> c first :c)
@@ -136,9 +136,10 @@
                 (nth (if relative? 2 1))
                 :c first
                 compact-path-component)
-        local (imp/->Local prefix directory file)]
-    (imp/map->Import {:type :local
-                      :data local})))
+        local (->Local prefix directory file)]
+    (map->Import
+      {:type :local
+       :data local})))
 
 (defmethod expr :http [{:keys [c]}]
   (let [headers? (case (count c)
@@ -147,11 +148,12 @@
                    nil)
         headers? (when headers?
                    (assoc headers? :mode :code)) ;; FIXME: we should have a smart constructor
-        remote (imp/map->Remote
+        remote (map->Remote
                  {:url      (-> c first expr)
                   :headers? headers?})]
-    (imp/map->Import {:type :remote
-                      :data remote})))
+    (map->Import
+      {:type :remote
+       :data remote})))
 
 (defmethod expr :http-raw [{:keys [c]}]
   (let [compact-next (fn [char coll]

@@ -2,20 +2,8 @@
   (:require [dhall-clj.ast :refer :all]
             [medley.core :refer [map-vals]]
             [digest :refer [sha-256]]
+            [dhall-clj.in.parse :refer [parse expr]]
             [dhall-clj.in.fail :as fail]))
-
-
-;; Imports data structures
-
-(defrecord Import [type   ;; :local, :remote, :env, :missing
-                   hash?  ;; maybe a sha256 in hex
-                   mode   ;; :code or :text
-                   data]) ;; the actual import, records defined below
-
-(defrecord Local [prefix directory file])
-(defrecord Remote [url headers?])
-(defrecord Env [name])
-(defrecord Missing [])
 
 
 ;; Cache
@@ -72,7 +60,7 @@
     "`canonicalize` will normalize the path position of directories"))
 
 (extend-protocol ICanonicalize
-  Local
+  dhall_clj.ast.Local
   (canonicalize [this]
     (update this :directory canonicalize-dir)))
 
@@ -90,11 +78,11 @@
 
 
 (extend-protocol IResolve
-  Missing
+  dhall_clj.ast.Missing
   (resolve-imports [_this cache]
     (fail/missing-keyword!))
 
-  Env
+  dhall_clj.ast.Env
   (resolve-imports [{:keys [name]} cache]
     (with-cache
       cache
@@ -103,7 +91,7 @@
         env
         (fail/missing-env! name))))
 
-  Import
+  dhall_clj.ast.Import
   (resolve-imports [{:keys [type hash? mode data]} cache]
     (let [raw (resolve-imports data cache)
           ;; TODO check + cache hashed stuff

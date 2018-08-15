@@ -2,7 +2,6 @@
   (:require [clojure.test :refer :all]
             [lambdaisland.uri :refer [uri]]
             [dhall-clj.ast :refer :all]
-            [dhall-clj.in.import :as imp]
             [dhall-clj.in.parse :refer [parse expr]]))
 
 (def cases
@@ -181,100 +180,115 @@
 
    ;; Imports
    ["env:TEST sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 as Text"
-    (imp/map->Import {:mode :text
-                      :type :env
-                      :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
-                      :data (imp/->Env "TEST")})]
+    (map->Import
+      {:mode :text
+       :type :env
+       :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+       :data (->Env "TEST")})]
 
    ["env:\"TE\\\"ST\" sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    (imp/map->Import {:mode :code
-                      :type :env
-                      :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
-                      :data (imp/->Env "TE\\\"ST")})]
+    (map->Import
+      {:mode :code
+       :type :env
+       :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+       :data (->Env "TE\\\"ST")})]
 
    ["./relative.dhall"
-    (imp/map->Import {:mode :code
-                      :type :local
-                      :hash? nil
-                      :data (imp/map->Local {:directory '()
-                                             :file "relative.dhall"
-                                             :prefix "."})})]
+    (map->Import
+      {:mode :code
+       :type :local
+       :hash? nil
+       :data (map->Local
+               {:directory '()
+                :file "relative.dhall"
+                :prefix "."})})]
 
    ["/absolute/file"
-    (imp/map->Import {:mode :code
-                      :type :local
-                      :hash? nil
-                      :data (imp/map->Local {:directory '("absolute")
-                                             :file "file"
-                                             :prefix nil})})]
+    (map->Import
+      {:mode :code
+       :type :local
+       :hash? nil
+       :data (map->Local
+               {:directory '("absolute")
+                :file "file"
+                :prefix nil})})]
 
    ["../../parent/file.dhall"
-    (imp/map->Import {:mode :code
-                      :type :local
-                      :hash? nil
-                      :data (imp/map->Local {:directory '(".." "parent")
-                                             :file "file.dhall"
-                                             :prefix ".."})})]
+    (map->Import
+      {:mode :code
+       :type :local
+       :hash? nil
+       :data (map->Local
+               {:directory '("parent" "..")
+                :file "file.dhall"
+                :prefix ".."})})]
 
    ["~/.env"
-    (imp/map->Import {:mode :code
-                      :type :local
-                      :hash? nil
-                      :data (imp/map->Local {:directory '()
-                                             :file ".env"
-                                             :prefix "~"})})]
+    (map->Import
+      {:mode :code
+       :type :local
+       :hash? nil
+       :data (map->Local
+               {:directory '()
+                :file ".env"
+                :prefix "~"})})]
 
    ["https://localhost/file using ./headers"
-    (imp/map->Import
+    (map->Import
       {:mode :code
        :type :remote
        :hash? nil
-       :data (imp/map->Remote {:headers? (imp/map->Import
-                                           {:data (imp/map->Local {:directory ()
-                                                                   :file "headers"
-                                                                   :prefix "."})
-                                            :hash? nil
-                                            :mode :code
-                                            :type :local})
-                               :url (uri "https://localhost/file")})})]
+       :data (map->Remote
+               {:headers? (map->Import
+                            {:data (map->Local
+                                     {:directory '()
+                                      :file "headers"
+                                      :prefix "."})
+                             :hash? nil
+                             :mode :code
+                             :type :local})
+                :url (uri "https://localhost/file")})})]
 
    ["https://localhost/file using (./headers)"
-    (imp/map->Import
+    (map->Import
       {:mode :code
        :type :remote
        :hash? nil
-       :data (imp/map->Remote {:headers? (imp/map->Import
-                                           {:data (imp/map->Local {:directory ()
-                                                                   :file "headers"
-                                                                   :prefix "."})
-                                            :hash? nil
-                                            :mode :code
-                                            :type :local})
-                               :url (uri "https://localhost/file")})})]
+       :data (map->Remote
+               {:headers? (map->Import
+                            {:data (map->Local
+                                     {:directory ()
+                                      :file "headers"
+                                      :prefix "."})
+                             :hash? nil
+                             :mode :code
+                             :type :local})
+                :url (uri "https://localhost/file")})})]
 
    ["https://localhost/file"
-    (imp/map->Import
+    (map->Import
       {:mode :code
        :type :remote
        :hash? nil
-       :data (imp/map->Remote {:headers? nil
-                               :url (uri "https://localhost/file")})})]
+       :data (map->Remote
+               {:headers? nil
+                :url (uri "https://localhost/file")})})]
 
    ["https://user:pass:more@localhost:8888/file?test#aaaa"
-    (imp/map->Import
+    (map->Import
       {:mode :code
        :type :remote
        :hash? nil
-       :data (imp/map->Remote
+       :data (map->Remote
                {:headers? nil
                 :url (uri "https://user:pass:more@localhost:8888/file?test#aaaa")})})]
 
    ["http://user@example.com/some/file.dhall"
-    (imp/map->Import
+    (map->Import
       {:mode :code
        :type :remote
        :hash? nil
-       :data (imp/map->Remote
+       :data (map->Remote
                {:headers? nil
                 :url (uri "http://user@example.com/some/file.dhall")})})]
 
