@@ -43,6 +43,8 @@
 
 (ex/derive ::missing-keyword ::imports)
 (ex/derive ::missing-env     ::imports)
+(ex/derive ::missing-imports ::imports)
+(ex/derive ::cyclic-import   ::imports)
 
 (defn missing-keyword!
   "Throws an ex-info from the `missing` keyword"
@@ -58,3 +60,20 @@
     "Missing environment variable: `%name~s`"
     {:type ::missing-env
      :name name}))
+
+(defn missing-imports!
+  "Throws an ex-info from a list of import errors"
+  [errors imported]
+  (throw-data
+    "Got errors while resolving imports"
+    {:type ::missing-imports
+     :errors errors
+     :imported imported}))
+
+(defn cyclic-import!
+  "Throws an ex-info on finding a cyclic import"
+  [import]
+  (throw-data
+    "Cyclic import"
+    {:type ::cyclic-import
+     :import import}))
