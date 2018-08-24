@@ -125,8 +125,8 @@
 (defmethod expr :local [{:keys [c]}]
   (let [raw-c (-> c first :c)
         relative? (string? (first raw-c))
-        prefix (when relative?
-                 (first raw-c))
+        prefix? (when relative?
+                  (first raw-c))
         compact-path-component #(-> % :c rest compact)
         directory (->> (nth raw-c (if relative? 1 0))
                      :c
@@ -136,7 +136,7 @@
                 (nth (if relative? 2 1))
                 :c first
                 compact-path-component)
-        local (->Local prefix directory file)]
+        local (->Local prefix? directory file)]
     (map->Import
       {:type :local
        :data local})))

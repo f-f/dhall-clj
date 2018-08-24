@@ -14,7 +14,7 @@
                    mode   ;; :code or :text
                    data]) ;; the actual import, records defined below
 
-(defrecord Local [prefix directory file])
+(defrecord Local [prefix? directory file])
 (defrecord Remote [url headers?])
 (defrecord Env [name])
 (defrecord Missing [])

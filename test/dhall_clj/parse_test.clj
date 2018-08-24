@@ -201,7 +201,7 @@
        :data (map->Local
                {:directory '()
                 :file "relative.dhall"
-                :prefix "."})})]
+                :prefix? "."})})]
 
    ["/absolute/file"
     (map->Import
@@ -211,7 +211,7 @@
        :data (map->Local
                {:directory '("absolute")
                 :file "file"
-                :prefix nil})})]
+                :prefix? nil})})]
 
    ["../../parent/file.dhall"
     (map->Import
@@ -221,7 +221,7 @@
        :data (map->Local
                {:directory '("parent" "..")
                 :file "file.dhall"
-                :prefix ".."})})]
+                :prefix? ".."})})]
 
    ["~/.env"
     (map->Import
@@ -231,7 +231,7 @@
        :data (map->Local
                {:directory '()
                 :file ".env"
-                :prefix "~"})})]
+                :prefix? "~"})})]
 
    ["https://localhost/file using ./headers"
     (map->Import
@@ -243,7 +243,7 @@
                             {:data (map->Local
                                      {:directory '()
                                       :file "headers"
-                                      :prefix "."})
+                                      :prefix? "."})
                              :hash? nil
                              :mode :code
                              :type :local})
@@ -259,7 +259,7 @@
                             {:data (map->Local
                                      {:directory ()
                                       :file "headers"
-                                      :prefix "."})
+                                      :prefix? "."})
                              :hash? nil
                              :mode :code
                              :type :local})
