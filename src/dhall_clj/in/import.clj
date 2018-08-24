@@ -23,14 +23,31 @@
     :else                      (conj (canonicalize-dir (rest directory))
                                      (first directory))))
 
-(defprotocol ICanonicalize
-  (canonicalize [this]
-    "`canonicalize` will normalize the path position of directories"))
 
-(extend-protocol ICanonicalize
+(defprotocol IFetch
+  (canonicalize [this]
+    "Normalize the path position of directories/paths")
+  (fetch [this]
+    "Perform the side effect of fetching the import from its source."))
+
+(extend-protocol IFetch
+  dhall_clj.ast.Missing
+  (canonicalize [this] this)
+  (resolve-imports [_this _state]
+    (fail/missing-keyword!))
+
+  dhall_clj.ast.Env
+  (canonicalize [this] this)
+  (resolve-imports [{:keys [name]} _state]
+    (if-let [env (System/getenv name)]
+      env
+      (fail/missing-env! name)))
+
   dhall_clj.ast.Local
   (canonicalize [this]
-    (update this :directory canonicalize-dir)))
+    (update this :directory canonicalize-dir))
+  (resolve-imports [this state]
+    this)) ;; TODO
 
 
 ;;
@@ -38,50 +55,36 @@
 ;;
 
 (defn expr-from-import
-  "Given a Missing, Env, Local or Remote,
-  fetches them from the appropriate place."
+  "Given a Missing, Env, Local or Remote, fetches them
+  from the appropriate place, and returns and expression
+  (that might contain more imports)."
   [import-data mode]
-  ;; Here we pass a `nil` in the State, because we don't
-  ;; have (and don't need) it
-  (let [raw (resolve-imports import-data nil)]
+  (let [raw (fetch import-data)]
     (if (= mode :code)
       (-> raw parse expr)
       (->TextLit [raw]))))
 
+
 (defprotocol IResolve
   (resolve-imports [this state]
-    "`resolve-imports` will fetch, verify and cache imports embedded in
-    the Expression.
+    "Takes an expression that might contain import expressions,
+    and returns an expression where all imports have been resolved,
+    verified and cached.
     Will throw an exception (of the `:dhall-clj.in.fail/imports` family)
-    in case it cannot resolve some expression."))
-
+    if some import cannot be resolved."))
 
 (extend-protocol IResolve
-  dhall_clj.ast.Missing
-  (resolve-imports [_this _state]
-    (fail/missing-keyword!))
-
-  dhall_clj.ast.Env
-  (resolve-imports [{:keys [name]} _state]
-    (if-let [env (System/getenv name)]
-      env
-      (fail/missing-env! name)))
-
-  dhall_clj.ast.Local
-  (resolve-imports [this state]
-    this) ;; TODO
-
   dhall_clj.ast.Import
-  (resolve-imports [{:keys [type hash? mode data]} state]
-    (let []
-      ;; TODO: canonicalize + chain the import
+  (resolve-imports [{:keys [type hash? mode data] :as this} state]
+    (let [this (canonicalize this)]
+      ;; TODO: chain the import
       ;; TODO: (check for referentially opaque once we import http)
       ;; TODO: check the cache, if not there:
       ;; TODO: run expr-from-import on the current import
       ;; TODO: add import to the stack and recur
       ;; TODO: typecheck + normalize
       ;; TODO: save the result in cache
-      data))
+      this))
 
   dhall_clj.ast.ImportAlt
   (resolve-imports [this state]
