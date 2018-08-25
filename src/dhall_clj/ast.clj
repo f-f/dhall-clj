@@ -1202,21 +1202,25 @@
 
   RecordT
   (beta-normalize [this]
-    (update this :kvs (fn [kvs] (map-vals beta-normalize kvs))))
+    (update this :kvs
+            #(->> % (map-vals beta-normalize) (into (sorted-map)))))
 
   RecordLit
   (beta-normalize [this]
-    (update this :kvs (fn [kvs] (map-vals beta-normalize kvs))))
+    (update this :kvs
+            #(->> % (map-vals beta-normalize) (into (sorted-map)))))
 
   UnionT
   (beta-normalize [this]
-    (update this :kvs (fn [kvs] (map-vals beta-normalize kvs))))
+    (update this :kvs
+            #(->> % (map-vals beta-normalize) (into (sorted-map)))))
 
   UnionLit
   (beta-normalize [this]
     (-> this
        (update :v beta-normalize)
-       (update :kvs (fn [kvs] (map-vals beta-normalize kvs)))))
+       (update :kvs
+               #(->> % (map-vals beta-normalize) (into (sorted-map))))))
 
   Combine
   (beta-normalize [{:keys [a b]}]
