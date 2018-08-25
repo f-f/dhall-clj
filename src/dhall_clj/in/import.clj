@@ -30,9 +30,9 @@
 (defprotocol IFetch
   (canonicalize [this]
     "Normalize the path position of directories/paths.")
-  (chain [children parent]
+  (chain [this stack]
     "Compute the position of the current (possibly relative) import
-    given the `parent` import.")
+    given the `stack` of parent imports.")
   (fetch [this]
     "Perform the side effect of fetching the import from its source.
     Returns a string or throws an `imports` exception."))
@@ -41,13 +41,13 @@
   Missing
   (canonicalize [this] this)
   (chain [this _stack] this)
-  (fetch [_this _state]
+  (fetch [_this]
     (fail/missing-keyword!))
 
   Env
   (canonicalize [this] this)
   (chain [this _stack] this)
-  (fetch [{:keys [name]} _state]
+  (fetch [{:keys [name]}]
     (if-let [env (System/getenv name)]
       env
       (fail/missing-env! name)))
@@ -77,7 +77,7 @@
            (canonicalize))
 
         :else this)))
-  (fetch [{:keys [prefix? directory file] :as this} state]
+  (fetch [{:keys [prefix? directory file] :as this}]
     (let [prefix (case prefix?
                    "~"  (fs/home)
                    "."  fs/*cwd*
@@ -120,7 +120,7 @@
   (resolve-imports [{:keys [hash? mode data] :as this} state]
     (let [data (-> data
                   (canonicalize)
-                  (chain (:imported state)))]
+                  (chain (:stack state)))]
       ;; TODO: (check for referentially opaque once we import http)
       ;; TODO: check the cache, if not there:
       ;; TODO: run expr-from-import on the current import
