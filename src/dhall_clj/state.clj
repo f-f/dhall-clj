@@ -10,7 +10,7 @@
   ;; Here we have to create a "fake import" so that we can
   ;; pass in an arbitrary filepath to use as pwd for import resolution
   (let [prefix?     (when-not (fs/absolute? pwd) ".")
-        directory   (or (reverse components (str/split pwd #"/")) '())
+        directory   (or (reverse (str/split pwd #"/")) '())
         root-import (map->Import
                       {:mode :code
                        :data (->Local prefix? directory ".")})]
