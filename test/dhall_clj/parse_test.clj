@@ -182,21 +182,18 @@
    ["env:TEST sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 as Text"
     (map->Import
       {:mode :text
-       :type :env
        :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
        :data (->Env "TEST")})]
 
    ["env:\"TE\\\"ST\" sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     (map->Import
       {:mode :code
-       :type :env
        :hash? "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
        :data (->Env "TE\\\"ST")})]
 
    ["./relative.dhall"
     (map->Import
       {:mode :code
-       :type :local
        :hash? nil
        :data (map->Local
                {:directory '()
@@ -206,7 +203,6 @@
    ["/absolute/file"
     (map->Import
       {:mode :code
-       :type :local
        :hash? nil
        :data (map->Local
                {:directory '("absolute")
@@ -216,7 +212,6 @@
    ["../../parent/file.dhall"
     (map->Import
       {:mode :code
-       :type :local
        :hash? nil
        :data (map->Local
                {:directory '("parent" "..")
@@ -226,7 +221,6 @@
    ["~/.env"
     (map->Import
       {:mode :code
-       :type :local
        :hash? nil
        :data (map->Local
                {:directory '()
@@ -236,7 +230,6 @@
    ["https://localhost/file using ./headers"
     (map->Import
       {:mode :code
-       :type :remote
        :hash? nil
        :data (map->Remote
                {:headers? (map->Import
@@ -245,14 +238,12 @@
                                       :file "headers"
                                       :prefix? "."})
                              :hash? nil
-                             :mode :code
-                             :type :local})
+                             :mode :code})
                 :url (uri "https://localhost/file")})})]
 
    ["https://localhost/file using (./headers)"
     (map->Import
       {:mode :code
-       :type :remote
        :hash? nil
        :data (map->Remote
                {:headers? (map->Import
@@ -261,14 +252,12 @@
                                       :file "headers"
                                       :prefix? "."})
                              :hash? nil
-                             :mode :code
-                             :type :local})
+                             :mode :code})
                 :url (uri "https://localhost/file")})})]
 
    ["https://localhost/file"
     (map->Import
       {:mode :code
-       :type :remote
        :hash? nil
        :data (map->Remote
                {:headers? nil
@@ -277,7 +266,6 @@
    ["https://user:pass:more@localhost:8888/file?test#aaaa"
     (map->Import
       {:mode :code
-       :type :remote
        :hash? nil
        :data (map->Remote
                {:headers? nil
@@ -286,7 +274,6 @@
    ["http://user@example.com/some/file.dhall"
     (map->Import
       {:mode :code
-       :type :remote
        :hash? nil
        :data (map->Remote
                {:headers? nil
