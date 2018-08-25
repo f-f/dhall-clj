@@ -4,7 +4,8 @@
             [digest :refer [sha-256]]
             [dhall-clj.in.parse :refer [parse expr]]
             [dhall-clj.state :as state]
-            [dhall-clj.in.fail :as fail]))
+            [dhall-clj.in.fail :as fail])
+  (:import [dhall_clj.ast Import Local Remote Env Missing]))
 
 
 ;;
@@ -26,27 +27,54 @@
 
 (defprotocol IFetch
   (canonicalize [this]
-    "Normalize the path position of directories/paths")
+    "Normalize the path position of directories/paths.")
   (fetch [this]
-    "Perform the side effect of fetching the import from its source."))
+    "Perform the side effect of fetching the import from its source.")
+  (chain [children parent]
+    "Compute the position of the current (possibly relative) import
+    given the `parent` import."))
 
 (extend-protocol IFetch
-  dhall_clj.ast.Missing
+  Missing
   (canonicalize [this] this)
-  (resolve-imports [_this _state]
+  (chain [this _stack] this)
+  (fetch [_this _state]
     (fail/missing-keyword!))
 
-  dhall_clj.ast.Env
+  Env
   (canonicalize [this] this)
-  (resolve-imports [{:keys [name]} _state]
+  (chain [this _stack] this)
+  (fetch [{:keys [name]} _state]
     (if-let [env (System/getenv name)]
       env
       (fail/missing-env! name)))
 
-  dhall_clj.ast.Local
+  Local
   (canonicalize [this]
     (update this :directory canonicalize-dir))
-  (resolve-imports [this state]
+  (chain [{:keys [prefix? directory file] :as this} stack]
+    (let [parent (first stack)]
+      (cond
+        ;; TODO Remote parents?
+        (and (instance? Local parent)
+             (= "." prefix?))
+        (-> parent
+           (assoc :file file
+                  :directory (concat directory
+                                     (:directory parent)))
+           (canonicalize))
+
+        ;; TODO Remote parents?
+        (and (instance? Local parent)
+             (= ".." prefix?))
+        (-> parent
+           (assoc :file file
+                  :directory (concat directory
+                                     (conj (:directory parent) "..")))
+           (canonicalize))
+
+        :else this)))
+  (fetch [this state]
     this)) ;; TODO
 
 
@@ -74,10 +102,11 @@
     if some import cannot be resolved."))
 
 (extend-protocol IResolve
-  dhall_clj.ast.Import
+  Import
   (resolve-imports [{:keys [type hash? mode data] :as this} state]
-    (let [this (canonicalize this)]
-      ;; TODO: chain the import
+    (let [data (-> data
+                  (canonicalize)
+                  (chain (:imported state)))]
       ;; TODO: (check for referentially opaque once we import http)
       ;; TODO: check the cache, if not there:
       ;; TODO: run expr-from-import on the current import
