@@ -120,14 +120,28 @@
   (resolve-imports [{:keys [hash? mode data] :as this} state]
     (let [data (-> data
                   (canonicalize)
-                  (chain (:stack state)))]
-      ;; TODO: (check for referentially opaque once we import http)
-      ;; TODO: check the cache, if not there:
-      ;; TODO: run expr-from-import on the current import
-      ;; TODO: add import to the stack and recur
-      ;; TODO: typecheck + normalize
-      ;; TODO: save the result in cache
-      this))
+                  (chain (:stack state)))
+          this (assoc this :data data)
+          ;; TODO: (check for referentially opaque once we import http)
+          ;; We atomically check the cache for this expr,
+          ;; if it's not there we compute the new value and add it
+          ;; to the new cache, otherwise, return the old cache
+          cache
+          (swap!
+            (:cache state)
+            (fn [c]
+              (if (get c this)
+                c ;; If the cache has the expr already, return the old val
+                (let [;; This `dynamic-expr` might still have imports
+                      dynamic-expr (expr-from-import data mode)
+                      resolved-expr (resolve-imports
+                                      dynamic-expr
+                                      (update state :stack conj data))]
+                      ;; TODO: typecheck + normalize
+                  ;; After we're done, add the resolved expr to cache
+                  (assoc c this resolved-expr)))))]
+      ;; Get the expr from the new cache
+      (get cache this)))
 
   dhall_clj.ast.ImportAlt
   (resolve-imports [this state]

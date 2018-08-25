@@ -10,12 +10,10 @@
   ;; Here we have to create a "fake import" so that we can
   ;; pass in an arbitrary filepath to use as pwd for import resolution
   (let [prefix?     (when-not (fs/absolute? pwd) ".")
-        components  (str/split pwd #"/")
-        file        "."
-        directory   (or (reverse components) '())
+        directory   (or (reverse components (str/split pwd #"/")) '())
         root-import (map->Import
                       {:mode :code
-                       :data (->Local prefix? directory file)})]
+                       :data (->Local prefix? directory ".")})]
     {;; List of parent `Import`s that the current import descends from
      :stack   (list root-import) ;; :: List ImportData
 
