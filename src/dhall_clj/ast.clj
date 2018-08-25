@@ -9,8 +9,7 @@
 ;; Imports classes
 ;;
 
-(defrecord Import [type   ;; :local, :remote, :env, :missing
-                   hash?  ;; maybe a sha256 in hex
+(defrecord Import [hash?  ;; maybe a sha256 in hex
                    mode   ;; :code or :text
                    data]) ;; the actual import, records defined below
 

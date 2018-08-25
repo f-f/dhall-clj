@@ -117,7 +117,7 @@
 
 (extend-protocol IResolve
   Import
-  (resolve-imports [{:keys [type hash? mode data] :as this} state]
+  (resolve-imports [{:keys [hash? mode data] :as this} state]
     (let [data (-> data
                   (canonicalize)
                   (chain (:imported state)))]

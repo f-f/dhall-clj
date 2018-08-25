@@ -113,14 +113,12 @@
   (-> c first expr))
 
 (defmethod expr :missing [_]
-  (->Import :missing nil :code (->Missing)))
+  (map->Import {:data (->Missing)}))
 
 (defmethod expr :env [{:keys [c]}]
   (let [envname (compact (nth c (if (string? (second c)) 2 1)))
         env (->Env envname)]
-    (map->Import
-      {:type :env
-       :data env})))
+    (map->Import {:data env})))
 
 (defmethod expr :local [{:keys [c]}]
   (let [raw-c (-> c first :c)
@@ -137,9 +135,7 @@
                 :c first
                 compact-path-component)
         local (->Local prefix? directory file)]
-    (map->Import
-      {:type :local
-       :data local})))
+    (map->Import {:data local})))
 
 (defmethod expr :http [{:keys [c]}]
   (let [headers? (case (count c)
@@ -151,9 +147,7 @@
         remote (map->Remote
                  {:url      (-> c first expr)
                   :headers? headers?})]
-    (map->Import
-      {:type :remote
-       :data remote})))
+    (map->Import {:data remote})))
 
 (defmethod expr :http-raw [{:keys [c]}]
   (let [compact-next (fn [char coll]
