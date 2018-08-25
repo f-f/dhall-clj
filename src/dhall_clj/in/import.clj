@@ -2,9 +2,11 @@
   (:require [dhall-clj.ast :refer :all]
             [medley.core :refer [map-vals]]
             [digest :refer [sha-256]]
+            [me.raynes.fs :as fs]
             [dhall-clj.in.parse :refer [parse expr]]
             [dhall-clj.state :as state]
-            [dhall-clj.in.fail :as fail])
+            [dhall-clj.in.fail :as fail]
+            [clojure.string :as str])
   (:import [dhall_clj.ast Import Local Remote Env Missing]))
 
 
@@ -28,11 +30,12 @@
 (defprotocol IFetch
   (canonicalize [this]
     "Normalize the path position of directories/paths.")
-  (fetch [this]
-    "Perform the side effect of fetching the import from its source.")
   (chain [children parent]
     "Compute the position of the current (possibly relative) import
-    given the `parent` import."))
+    given the `parent` import.")
+  (fetch [this]
+    "Perform the side effect of fetching the import from its source.
+    Returns a string or throws an `imports` exception."))
 
 (extend-protocol IFetch
   Missing
@@ -74,9 +77,20 @@
            (canonicalize))
 
         :else this)))
-  (fetch [this state]
-    this)) ;; TODO
-
+  (fetch [{:keys [prefix? directory file] :as this} state]
+    (let [prefix (case prefix?
+                   "~"  (fs/home)
+                   "."  fs/*cwd*
+                   ".." (str fs/*cwd* "/..")
+                   nil)
+          filepath (str prefix
+                        "/"
+                        (str/join "/" (reverse directory))
+                        "/"
+                        file)]
+      (if (fs/exists? filepath)
+        (slurp filepath)
+        (fail/missing-file! filepath this)))))
 
 ;;
 ;; Resolving imports

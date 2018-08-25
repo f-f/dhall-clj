@@ -43,6 +43,7 @@
 
 (ex/derive ::missing-keyword ::imports)
 (ex/derive ::missing-env     ::imports)
+(ex/derive ::missing-file    ::imports)
 (ex/derive ::missing-imports ::imports)
 (ex/derive ::cyclic-import   ::imports)
 
@@ -60,6 +61,14 @@
     "Missing environment variable: `%name~s`"
     {:type ::missing-env
      :name name}))
+
+(defn missing-file!
+  [path import]
+  (throw-data
+    "File not found: `%path~s`"
+    {:type ::missing-file
+     :path path
+     :import import}))
 
 (defn missing-imports!
   "Throws an ex-info from a list of import errors"
