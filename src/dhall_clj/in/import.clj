@@ -6,7 +6,8 @@
             [dhall-clj.in.parse :refer [parse expr]]
             [dhall-clj.state :as state]
             [dhall-clj.in.fail :as fail]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [dhall-clj.state :as s])
   (:import [dhall_clj.ast Import Local Remote Env Missing]))
 
 
@@ -121,27 +122,21 @@
     (let [data (-> data
                   (canonicalize)
                   (chain (:stack state)))
-          this (assoc this :data data)
+          this (assoc this :data data)]
           ;; TODO: (check for referentially opaque once we import http)
-          ;; We atomically check the cache for this expr,
-          ;; if it's not there we compute the new value and add it
-          ;; to the new cache, otherwise, return the old cache
-          cache
-          (swap!
-            (:cache state)
-            (fn [c]
-              (if (get c this)
-                c ;; If the cache has the expr already, return the old val
-                (let [;; This `dynamic-expr` might still have imports
-                      dynamic-expr (expr-from-import data mode)
-                      resolved-expr (resolve-imports
-                                      dynamic-expr
-                                      (update state :stack conj data))]
-                      ;; TODO: typecheck + normalize
-                  ;; After we're done, add the resolved expr to cache
-                  (assoc c this resolved-expr)))))]
-      ;; Get the expr from the new cache
-      (get cache this)))
+      (s/with-cache!
+        (:cache state)
+        this
+        (let [;; This `dynamic-expr` might still have imports
+              dynamic-expr (s/with-cache!
+                             (:cache-raw state)
+                             this
+                             (expr-from-import data mode))
+              resolved-expr (resolve-imports
+                              dynamic-expr
+                              (update state :stack conj data))]
+          ;; TODO: typecheck + normalize
+          resolved-expr))))
 
   dhall_clj.ast.ImportAlt
   (resolve-imports [this state]
