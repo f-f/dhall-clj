@@ -6,14 +6,11 @@
 (defn new
   "Create a new `State` map, to hold all the contexts and caches while we
   resolve imports and typecheck."
-  [pwd]
-  ;; Here we have to create a "fake import" so that we can
-  ;; pass in an arbitrary filepath to use as pwd for import resolution
-  (let [prefix?     (when-not (fs/absolute? pwd) ".")
-        directory   (or (reverse (fs/split pwd)) '())
-        root-import (map->Import
+  []
+  ;; FIXME: we should remove this "fake" import as it's totally useless by now
+  (let [root-import (map->Import
                       {:mode :code
-                       :data (->Local prefix? directory ".")})]
+                       :data (->Local "." '() ".")})]
     {;; List of parent `Import`s that the current import descends from
      :stack     (list root-import) ;; :: List ImportData
 

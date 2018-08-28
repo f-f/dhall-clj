@@ -3,6 +3,7 @@
             [medley.core :refer [map-vals]]
             [digest :refer [sha-256]]
             [me.raynes.fs :as fs]
+            [clojure.java.io :as io]
             [dhall-clj.in.parse :refer [parse expr]]
             [dhall-clj.state :as state]
             [dhall-clj.in.fail :as fail]
@@ -82,13 +83,12 @@
     (let [prefix (case prefix?
                    "~"  (fs/home)
                    "."  fs/*cwd*
-                   ".." (str fs/*cwd* "/..")
+                   ".." (io/file fs/*cwd* "..")
                    nil)
-          filepath (str prefix
-                        "/"
-                        (str/join "/" (reverse directory))
-                        "/"
-                        file)]
+          filepath (io/file
+                     prefix
+                     (apply io/file (reverse (conj directory ".")))
+                     file)]
       (if (fs/exists? filepath)
         (slurp filepath)
         (fail/missing-file! filepath this)))))
