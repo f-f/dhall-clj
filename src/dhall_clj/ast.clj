@@ -780,13 +780,12 @@
             (let [zero  a'
                   succ' (:b f')
                   t     (:b (:a f'))
-                  n0    (:n (:b (:a (:a f'))))
-                  _ (declare go)
-                  go (fn [n]
-                       (if (zero? n)
-                         (beta-normalize zero)
-                         (beta-normalize (->App succ' (go (dec n))))))]
-              (go n0))
+                  n0    (:n (:b (:a (:a f'))))]
+              (letfn [(go [n]
+                        (if (zero? n)
+                          (beta-normalize zero)
+                          (beta-normalize (->App succ' (go (dec n))))))]
+                (go n0)))
 
             ;; NaturalBuild
             (instance? NaturalBuild f')

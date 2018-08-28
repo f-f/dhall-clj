@@ -83,15 +83,6 @@
    "dhall-haskell/tests/normalization/examples/Text/concatMap/0"
    "dhall-haskell/tests/normalization/remoteSystems"
 
-   ;; ast:788, unbound go
-   "dhall-haskell/tests/normalization/examples/Natural/fold/2"
-   "dhall-haskell/tests/normalization/examples/Natural/fold/0"
-   "dhall-haskell/tests/normalization/examples/Natural/fold/1"
-   "dhall-haskell/tests/normalization/examples/List/iterate/0"
-   "dhall-haskell/tests/normalization/examples/List/generate/0"
-   "dhall-haskell/tests/normalization/examples/Natural/enumerate/0"
-   "dhall-haskell/tests/normalization/examples/List/replicate/0"
-
    ;; No matching clause: :in-raw
    "dhall-haskell/tests/normalization/examples/List/indexed/0"
    "dhall-haskell/tests/normalization/examples/List/indexed/1"
@@ -101,6 +92,11 @@
    "dhall-haskell/tests/normalization/examples/List/shifted/1"
 
    ;; Actual test failures for results mismatch
+   "dhall-haskell/tests/normalization/examples/Natural/fold/1"
+   "dhall-haskell/tests/normalization/examples/List/iterate/0"
+   "dhall-haskell/tests/normalization/examples/List/generate/0"
+   "dhall-haskell/tests/normalization/examples/Natural/enumerate/0"
+
    "dhall-haskell/tests/normalization/examples/List/filter/0"
    "dhall-haskell/tests/normalization/examples/Text/concatMapSep/0"
    "dhall-haskell/tests/normalization/examples/Text/concat/0"
