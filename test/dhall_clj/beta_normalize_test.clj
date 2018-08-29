@@ -78,11 +78,7 @@
 (def problematic
   "Here we list all the tests that blow up, so we categorize and exclude them"
 
-  [;; Exc: no implementation of resolve-imports for nil, called from TextLit
-   "dhall-haskell/tests/normalization/examples/Text/concatMap/1"
-   "dhall-haskell/tests/normalization/examples/Text/concatMap/0"
-   "dhall-haskell/tests/normalization/remoteSystems"
-
+  [
    ;; No matching clause: :in-raw
    "dhall-haskell/tests/normalization/examples/List/indexed/0"
    "dhall-haskell/tests/normalization/examples/List/indexed/1"
@@ -92,11 +88,11 @@
    "dhall-haskell/tests/normalization/examples/List/shifted/1"
 
    ;; Actual test failures for results mismatch
+   "dhall-haskell/tests/normalization/remoteSystems"
    "dhall-haskell/tests/normalization/examples/Natural/fold/1"
    "dhall-haskell/tests/normalization/examples/List/iterate/0"
    "dhall-haskell/tests/normalization/examples/List/generate/0"
    "dhall-haskell/tests/normalization/examples/Natural/enumerate/0"
-
    "dhall-haskell/tests/normalization/examples/List/filter/0"
    "dhall-haskell/tests/normalization/examples/Text/concatMapSep/0"
    "dhall-haskell/tests/normalization/examples/Text/concat/0"

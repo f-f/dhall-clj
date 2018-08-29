@@ -742,10 +742,11 @@
           f' (beta-normalize f)]
       (if (instance? Lam f')
         (let [{:keys [arg type body]} f'
-              a' (shift a 1 (->Var arg 0))]
+              v  (->Var arg 0)
+              a' (shift a 1 v)]
           (-> body
-             (subst (->Var arg 0) a')
-             (shift -1 (->Var arg 0))
+             (subst v a')
+             (shift -1 v)
              beta-normalize))
         (let [a' (beta-normalize a)]
           (cond
@@ -885,8 +886,8 @@
                   t     (:b (:a f'))
                   xs    (:exprs (:b (:a (:a f'))))
                   fold  (fn [y ys]
-                          (beta-normalize (->App (->App _cons y) ys)))]
-              (reduce fold (beta-normalize _nil) xs))
+                          (beta-normalize (->App (->App _cons ys) y)))]
+              (reduce fold (beta-normalize _nil) (reverse xs)))
 
             ;; ListLength
             (and (instance? App f')
@@ -1116,6 +1117,7 @@
   TextLit
   (beta-normalize [this]
     (let [normalized-chunks (:chunks (map-chunks this beta-normalize))
+          ;; We "bring down" one level possibly nested TextLit
           new-chunks (mapcat #(if (instance? TextLit %)
                                 (:chunks %)
                                 (list %))
@@ -1128,15 +1130,34 @@
 
   TextAppend
   (beta-normalize [{:keys [a b]}]
-    (let [empty-text? (fn [t]
+    (let [compact (fn [chunks]
+                    (loop [cs  chunks
+                           acc nil
+                           new []]
+                      (if (seq cs)
+                        (let [c (first cs)]
+                          (if (string? c)
+                            (recur (rest cs)
+                                   (str acc c)
+                                   new)
+                            (recur (rest cs)
+                                   nil
+                                   (conj new (or acc "") c))))
+                        (if-not acc
+                          new
+                          (conj new acc)))))
+          empty-text? (fn [t]
                         (and (instance? TextLit t)
-                             (-> t :chunks first str/blank?)))
+                             (every? #(and (string? %) (empty? %))
+                                     (:chunks t))))
           decide (fn [l r]
                    (cond
                      (empty-text? l)             r
                      (empty-text? r)             l
                      (and (instance? TextLit l)
-                          (instance? TextLit r)) (->TextLit (concat (:chunks l) (:chunks r)))
+                          (instance? TextLit r)) (->TextLit
+                                                   (compact
+                                                     (concat (:chunks l) (:chunks r))))
                      :else                       (->TextAppend l r)))]
       (decide (beta-normalize a) (beta-normalize b))))
 

@@ -22,7 +22,7 @@
   TODO: save the meta!"
   [tree]
   (if (map? tree)
-    {:c (mapv clean (:content tree))
+    {:c (map clean (:content tree))
      ;;:a (:attrs tree)
      :t (:tag tree)}
     tree))
@@ -512,7 +512,7 @@
                        chunks)
                 (recur (rest children)
                        nil
-                       (conj chunks acc (expr (nth content 1))))))
+                       (conj chunks (or acc "") (expr (nth content 1))))))
             ;; If we have no children left to process,
             ;; we return the chunks we have, plus the accomulator
             (if-not acc
@@ -535,7 +535,7 @@
                      chunks)
               (recur (-> children (nth 3) :c)
                      nil
-                     (conj chunks acc (expr (second children)))))))))))
+                     (conj chunks (or acc "") (expr (second children)))))))))))
 
 ;; Default case, we end up here when there is no matches
 (defmethod expr :default [e]
