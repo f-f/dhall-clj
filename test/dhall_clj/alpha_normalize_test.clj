@@ -1,5 +1,6 @@
 (ns dhall-clj.alpha-normalize-test
   (:require [clojure.test :refer :all]
+            [dhall-clj.alpha-normalize :refer [alpha-normalize]]
             [dhall-clj.ast :refer :all]))
 
 (def anormalize-cases
