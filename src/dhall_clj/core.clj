@@ -1,6 +1,6 @@
 (ns dhall-clj.core
   (:require [dhall-clj.in.parse :refer [parse expr]]
-            [dhall-clj.ast :refer [beta-normalize]]
+            [dhall-clj.beta-normalize :refer [beta-normalize]]
             [dhall-clj.in.emit :refer [emit]]))
 
 
