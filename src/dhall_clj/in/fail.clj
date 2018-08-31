@@ -6,8 +6,9 @@
 ;; Top hierarchy
 ;;
 
-(ex/derive ::read    ::dhall-clj)
-(ex/derive ::imports ::dhall-clj)
+(ex/derive ::read      ::dhall-clj)
+(ex/derive ::imports   ::dhall-clj)
+(ex/derive ::typecheck ::dhall-clj)
 
 
 ;;
@@ -86,3 +87,52 @@
     "Cyclic import"
     {:type ::cyclic-import
      :import import}))
+
+
+;;
+;; Typecheck
+;;
+
+(defn type-error!
+  "Throws an ex-info on a Typecheck issue"
+  ([typ ctx ex]
+   (type-error! typ ctx ex {}))
+  ([typ ctx ex more-data]
+   (throw-data
+     "Typecheck error: `%type~s`"
+     {:type typ
+      :context ctx
+      :expression ex
+      :more-data more-data})))
+
+(ex/derive ::untyped                ::typecheck)
+(ex/derive ::unbound-variable       ::typecheck)
+(ex/derive ::annot-mismatch         ::typecheck)
+(ex/derive ::cant-and               ::typecheck)
+(ex/derive ::cant-or                ::typecheck)
+(ex/derive ::cant-eq                ::typecheck)
+(ex/derive ::cant-neq               ::typecheck)
+(ex/derive ::cant-add               ::typecheck)
+(ex/derive ::cant-multiply          ::typecheck)
+(ex/derive ::cant-text-append       ::typecheck)
+(ex/derive ::cant-list-append       ::typecheck)
+(ex/derive ::invalid-predicate      ::typecheck)
+(ex/derive ::if-branch-must-be-term ::typecheck)
+(ex/derive ::if-branch-mismatch     ::typecheck)
+(ex/derive ::list-append-mismatch   ::typecheck)
+
+(def untyped!                (partial type-error! ::untyped))
+(def unbound-variable!       (partial type-error! ::unbound-variable))
+(def annot-mismatch!         (partial type-error! ::annot-mismatch))
+(def cant-and!               (partial type-error! ::cant-and))
+(def cant-or!                (partial type-error! ::cant-or))
+(def cant-eq!                (partial type-error! ::cant-eq))
+(def cant-neq!               (partial type-error! ::cant-neq))
+(def cant-add!               (partial type-error! ::cant-add))
+(def cant-multiply!          (partial type-error! ::cant-multiply))
+(def cant-text-append!       (partial type-error! ::cant-text-append))
+(def cant-list-append!       (partial type-error! ::cant-list-append))
+(def invalid-predicate!      (partial type-error! ::invalid-predicate))
+(def if-branch-must-be-term! (partial type-error! ::if-branch-must-be-term))
+(def if-branch-mismatch!     (partial type-error! ::if-branch-mismatch))
+(def list-append-mismatch!   (partial type-error! ::list-append-mismatch))
