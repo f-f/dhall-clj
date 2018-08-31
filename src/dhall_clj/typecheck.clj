@@ -80,39 +80,19 @@
 
   dhall_clj.ast.BoolAnd
   (typecheck [{:keys [a b] :as this} ctx]
-    (let [aT (-> a (typecheck ctx) beta-normalize)
-          bT (-> b (typecheck ctx) beta-normalize)]
-      (cond
-        (not (instance? BoolT aT)) (fail/cant-and! ctx this {:a a :a-type aT})
-        (not (instance? BoolT bT)) (fail/cant-and! ctx this {:b b :b-type bT})
-        :else                      (->BoolT))))
+    (typecheck-binary this ctx BoolT fail/cant-and!))
 
   dhall_clj.ast.BoolOr
   (typecheck [{:keys [a b] :as this} ctx]
-    (let [aT (-> a (typecheck ctx) beta-normalize)
-          bT (-> b (typecheck ctx) beta-normalize)]
-      (cond
-        (not (instance? BoolT aT)) (fail/cant-or! ctx this {:a a :a-type aT})
-        (not (instance? BoolT bT)) (fail/cant-or! ctx this {:b b :b-type bT})
-        :else                      (->BoolT))))
+    (typecheck-binary this ctx BoolT fail/cant-or!))
 
   dhall_clj.ast.BoolEQ
   (typecheck [{:keys [a b] :as this} ctx]
-    (let [aT (-> a (typecheck ctx) beta-normalize)
-          bT (-> b (typecheck ctx) beta-normalize)]
-      (cond
-        (not (instance? BoolT aT)) (fail/cant-eq! ctx this {:a a :a-type aT})
-        (not (instance? BoolT bT)) (fail/cant-eq! ctx this {:b b :b-type bT})
-        :else                      (->BoolT))))
+    (typecheck-binary this ctx BoolT fail/cant-eq!))
 
   dhall_clj.ast.BoolNE
   (typecheck [{:keys [a b] :as this} ctx]
-    (let [aT (-> a (typecheck ctx) beta-normalize)
-          bT (-> b (typecheck ctx) beta-normalize)]
-      (cond
-        (not (instance? BoolT aT)) (fail/cant-neq! ctx this {:a a :a-type aT})
-        (not (instance? BoolT bT)) (fail/cant-neq! ctx this {:b b :b-type bT})
-        :else                      (->BoolT))))
+    (typecheck-binary this ctx BoolT fail/cant-neq!))
 
   dhall_clj.ast.BoolIf
   (typecheck [{:keys [test then else] :as this} ctx]
@@ -198,23 +178,11 @@
 
   dhall_clj.ast.NaturalPlus
   (typecheck [{:keys [a b] :as this} ctx]
-    (let [aT (-> a (typecheck ctx) beta-normalize)
-          bT (-> b (typecheck ctx) beta-normalize)]
-      (cond
-        (not (instance? NaturalT aT)) (fail/cant-add! ctx this {:a a :a-type aT})
-        (not (instance? NaturalT bT)) (fail/cant-add! ctx this {:b b :b-type bT})
-        :else                         (->NaturalT))))
-
+    (typecheck-binary this ctx NaturalT fail/cant-add!))
 
   dhall_clj.ast.NaturalTimes
   (typecheck [{:keys [a b] :as this} ctx]
-    (let [aT (-> a (typecheck ctx) beta-normalize)
-          bT (-> b (typecheck ctx) beta-normalize)]
-      (cond
-        (not (instance? NaturalT aT)) (fail/cant-multiply! ctx this {:a a :a-type aT})
-        (not (instance? NaturalT bT)) (fail/cant-multiply! ctx this {:b b :b-type bT})
-        :else                         (->NaturalT))))
-
+    (typecheck-binary this ctx NaturalT fail/cant-multiply!))
 
   dhall_clj.ast.IntegerT
   (typecheck [this _ctx]
@@ -253,12 +221,7 @@
 
   dhall_clj.ast.TextAppend
   (typecheck [{:keys [a b] :as this} ctx]
-    (let [aT (-> a (typecheck ctx) beta-normalize)
-          bT (-> b (typecheck ctx) beta-normalize)]
-      (cond
-        (not (instance? TextT aT)) (fail/cant-text-append! ctx this {:a a :a-type aT})
-        (not (instance? TextT bT)) (fail/cant-text-append! ctx this {:b b :b-type bT})
-        :else                      (->TextT))))
+    (typecheck-binary this ctx TextT fail/cant-text-append!))
 
   dhall_clj.ast.ListT
   (typecheck [this _ctx]
