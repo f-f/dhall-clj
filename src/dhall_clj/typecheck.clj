@@ -1,9 +1,10 @@
 (ns dhall-clj.typecheck
-  (:require [dhall-clj.ast :refer :all]
+  (:require [medley.core :refer [map-kv]]
+            [dhall-clj.ast :refer :all]
             [dhall-clj.context :as context]
             [dhall-clj.in.fail :as fail]
             [dhall-clj.beta-normalize :refer [beta-normalize judgmentally-equal]])
-  (:import [dhall_clj.ast BoolT NaturalT TextT App ListT]))
+  (:import [dhall_clj.ast BoolT NaturalT TextT ListT UnionT App Const]))
 
 
 (defmacro typecheck-binary
@@ -18,7 +19,7 @@
        (cond
          (not (instance? ~typ-class aT#)) (~exc-fn ~ctx ~this {:a a# :a-type aT#})
          (not (instance? ~typ-class bT#)) (~exc-fn ~ctx ~this {:b b# :b-type bT#})
-         :else                      (~op-constructor)))))
+         :else (~op-constructor)))))
 
 
 (defprotocol ITypecheck
@@ -53,7 +54,22 @@
       pi))
 
   dhall_clj.ast.Pi
-  (typecheck [this ctx] "TODO typecheck Pi")
+  (typecheck [{:keys [arg type body] :as this} ctx]
+    (let [typeT (-> type (typecheck ctx) beta-normalize)
+          typeK (if (instance? Const typeT)
+                  (:c typeT)
+                  (fail/invalid-input-type! ctx this {:type type}))
+          ;; FIXME: here the haskell impl typechecks again `type`
+          ctx' (-> (beta-normalize type)
+                  (context/insert arg ctx)
+                  (context/transform (fn [e] (shift e 1 (->Var arg 0)))))
+          bodyT (-> body (typecheck ctx') beta-normalize)
+          bodyK (if (instance? Const bodyT)
+                  (:c bodyT)
+                  (fail/invalid-output-type! ctx' this {:body body}))]
+      (if (and (= typeK :type) (= bodyK :kind))
+        (fail/no-dependent-types! ctx this {:type type :body body})
+        (->Const bodyK))))
 
   dhall_clj.ast.App
   (typecheck [this ctx] "TODO typecheck App")
@@ -67,8 +83,11 @@
           type' (typecheck val  ctx)]
       (if (judgmentally-equal type type')
         type
-        (fail/annot-mismatch! ctx this {:val  (beta-normalize type')
-                                        :type (beta-normalize type)}))))
+        (fail/annot-mismatch!
+          ctx
+          this
+          {:val  (beta-normalize type')
+           :type (beta-normalize type)}))))
 
   dhall_clj.ast.BoolT
   (typecheck [this _ctx]
@@ -317,7 +336,18 @@
     (->Pi "_" (->Const :type) (->Const :type)))
 
   dhall_clj.ast.OptionalLit
-  (typecheck [this ctx] "TODO typecheck OptionalLit")
+  (typecheck [{:keys [type val?] :as this} ctx]
+    (let [k (-> type (typecheck ctx) beta-normalize)]
+      (when-not (= k (->Const :type))
+        (fail/invalid-optional-type! ctx this {:type type}))
+      (when val?
+        (let [type' (typecheck val? ctx)]
+          (when-not (judgmentally-equal type type')
+            (fail/invalid-optional-element!
+              {:type (beta-normalize type)
+               :value val?
+               :value-type (beta-normalize val?)}))))
+      (->App (->OptionalT) type)))
 
   dhall_clj.ast.OptionalFold
   (typecheck [this _ctx]
@@ -356,10 +386,22 @@
   (typecheck [this ctx] "TODO typecheck RecordLit")
 
   dhall_clj.ast.UnionT
-  (typecheck [this ctx] "TODO typecheck UnionT")
+  (typecheck [{:keys [kvs] :as this} ctx]
+    (mapv
+      (fn [k t]
+        (when-not (instance? Const (-> t (typecheck ctx) beta-normalize))
+          (fail/invalid-alternative-type! ctx this {:k k :t t})))
+      kvs)
+    (->Const :type))
 
   dhall_clj.ast.UnionLit
-  (typecheck [this ctx] "TODO typecheck UnionLit")
+  (typecheck [{:keys [k v kvs] :as this} ctx]
+    (when (contains? kvs k)
+      (fail/duplicate-alternative! ctx this {:k k}))
+    (let [typ (typecheck v ctx)
+          union (->UnionT (assoc kvs k (beta-normalize typ)))
+          _ (typecheck union ctx)]
+      union))
 
   dhall_clj.ast.Combine
   (typecheck [this ctx] "TODO typecheck Combine")
@@ -374,7 +416,18 @@
   (typecheck [this ctx] "TODO typecheck Merge")
 
   dhall_clj.ast.Constructors
-  (typecheck [this ctx] "TODO typecheck Constructors")
+  (typecheck [{:keys [e] :as this} ctx]
+    (typecheck e ctx)
+    (let [e'  (beta-normalize e)
+          kts (if (instance? UnionT e')
+                (:kvs e')
+                (fail/constructors-require-a-union-type!
+                  ctx
+                  this
+                  {:type e :type-normal e'}))]
+      (->RecordT (map-kv
+                   (fn [k v] [k (->Pi k v (->UnionT kts))])
+                   kts))))
 
   dhall_clj.ast.Field
   (typecheck [this ctx] "TODO typecheck Field")
