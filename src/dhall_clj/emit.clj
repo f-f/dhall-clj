@@ -1,4 +1,4 @@
-(ns dhall-clj.in.emit
+(ns dhall-clj.emit
   (:require [clojure.string :as string]
             [dhall-clj.ast :refer :all]))
 

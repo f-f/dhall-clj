@@ -1,8 +1,9 @@
 (ns dhall-clj.typecheck
   (:require [medley.core :refer [map-kv]]
+            [clojure.set :refer [union difference]]
             [dhall-clj.ast :refer :all]
             [dhall-clj.context :as context]
-            [dhall-clj.in.fail :as fail]
+            [dhall-clj.fail :as fail]
             [dhall-clj.beta-normalize :refer [beta-normalize judgmentally-equal]])
   (:import [dhall_clj.ast BoolT NaturalT TextT ListT UnionT App Const Pi RecordT]))
 
@@ -41,7 +42,7 @@
                     [k b]
 
                     :else (error-fn {:k k}))))
-              (clojure.set/union
+              (union
                 (set (keys ktsA))
                 (set (keys ktsB))))]
     (->RecordT (into {} kts))))
@@ -50,7 +51,8 @@
 (defprotocol ITypecheck
   (typecheck [this context]
     "Typecheck an expression in a context.
-    Returns the type on success, or excepts."))
+    Returns the type on success, or excepts with an
+    ex-info of type `:dhall-clj.fail/typecheck`."))
 
 
 (extend-protocol ITypecheck
@@ -660,8 +662,8 @@
                  (fail/must-merge-union! ctx this {:b b :b-type bT}))
           keysA (set (keys ktsA))
           keysB (set (keys ktsB))
-          diffA (clojure.set/difference keysA keysB)
-          diffB (clojure.set/difference keysB keysA)
+          diffA (difference keysA keysB)
+          diffB (difference keysB keysA)
           _ (when-not (empty? diffA)
               (fail/unused-handler! ctx this {:unused diffA}))
           t (if type?

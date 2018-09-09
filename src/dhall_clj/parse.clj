@@ -1,9 +1,9 @@
-(ns dhall-clj.in.parse
+(ns dhall-clj.parse
   (:require [instaparse.core :as insta]
             [clojure.java.io :as io]
             [lambdaisland.uri :refer [uri join]]
             [dhall-clj.ast :refer :all]
-            [dhall-clj.in.fail :as fail]
+            [dhall-clj.fail :as fail]
             [clojure.string :as str]))
 
 (def grammar

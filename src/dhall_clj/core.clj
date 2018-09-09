@@ -1,7 +1,7 @@
 (ns dhall-clj.core
-  (:require [dhall-clj.in.parse :refer [parse expr]]
+  (:require [dhall-clj.parse :refer [parse expr]]
             [dhall-clj.beta-normalize :refer [beta-normalize]]
-            [dhall-clj.in.emit :refer [emit]]))
+            [dhall-clj.emit :refer [emit]]))
 
 
 (defn input-ast

@@ -2,8 +2,8 @@
   (:require  [clojure.test :refer :all]
              [medley.core :refer [map-vals]]
              [dhall-clj.ast :refer :all]
-             [dhall-clj.in.parse :refer [parse expr]]
-             [dhall-clj.in.import :refer [resolve-imports]]
+             [dhall-clj.parse :refer [parse expr]]
+             [dhall-clj.import :refer [resolve-imports]]
              [dhall-clj.beta-normalize :refer [beta-normalize]]
              [dhall-clj.state :as s]
              [me.raynes.fs :as fs]))

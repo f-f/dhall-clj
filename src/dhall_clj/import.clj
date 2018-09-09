@@ -1,12 +1,12 @@
-(ns dhall-clj.in.import
+(ns dhall-clj.import
   (:require [dhall-clj.ast :refer :all]
             [medley.core :refer [map-vals]]
             [digest :refer [sha-256]]
             [me.raynes.fs :as fs]
             [clojure.java.io :as io]
-            [dhall-clj.in.parse :refer [parse expr]]
+            [dhall-clj.parse :refer [parse expr]]
             [dhall-clj.state :as state]
-            [dhall-clj.in.fail :as fail]
+            [dhall-clj.fail :as fail]
             [clojure.string :as str]
             [dhall-clj.state :as s])
   (:import [dhall_clj.ast Import Local Remote Env Missing]))
@@ -113,7 +113,7 @@
     "Takes an expression that might contain import expressions,
     and returns an expression where all imports have been resolved,
     verified and cached.
-    Will throw an exception (of the `:dhall-clj.in.fail/imports` family)
+    Will throw an exception (of the `:dhall-clj.fail/imports` family)
     if some import cannot be resolved."))
 
 (extend-protocol IResolve

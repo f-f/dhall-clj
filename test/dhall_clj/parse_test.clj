@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [lambdaisland.uri :refer [uri]]
             [dhall-clj.ast :refer :all]
-            [dhall-clj.in.parse :refer [parse expr]]))
+            [dhall-clj.parse :refer [parse expr]]))
 
 (def cases
   [["2.0"

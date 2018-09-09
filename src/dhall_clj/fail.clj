@@ -1,4 +1,4 @@
-(ns dhall-clj.in.fail
+(ns dhall-clj.fail
   (:require [com.gfredericks.catch-data :refer [throw-data]]
             [qbits.ex :as ex]))
 
