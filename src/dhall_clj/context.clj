@@ -9,7 +9,7 @@
   (update ctx name
           (fn [current]
             (if-not current
-              [val]
+              (list val)
               (conj current val)))))
 
 (defn lookup
@@ -17,7 +17,7 @@
   Returns the result if it's there, or `nil` if not."
   [ctx name i]
   (try
-    ((get ctx name) i)
+    (nth (get ctx name) i)
     (catch Exception e
       nil)))
 
@@ -25,4 +25,4 @@
   "Given a `f :: Expr -> Expr`, traverses the whole `ctx`
   applying it to all values."
   [ctx f]
-  (map-vals (partial mapv f) ctx))
+  (map-vals (partial map f) ctx))
