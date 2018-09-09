@@ -334,6 +334,13 @@
        (update :type resolve-imports state)
        (assoc :val? (when val? (resolve-imports val? state)))))
 
+  dhall_clj.ast.Some
+  (resolve-imports [this state]
+    (update this :e resolve-imports state))
+
+  dhall_clj.ast.None
+  (resolve-imports [this _state] this)
+
   dhall_clj.ast.OptionalFold
   (resolve-imports [this state] this)
 

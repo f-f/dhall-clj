@@ -6,8 +6,8 @@
             NaturalBuild NaturalFold OptionalBuild OptionalFold NaturalIsZero
             NaturalEven NaturalOdd NaturalToInteger NaturalShow IntegerLit
             IntegerShow IntegerToDouble DoubleLit DoubleShow ListLit ListLength
-            ListHead ListLast ListIndexed ListReverse OptionalLit RecordLit
-            UnionLit RecordT UnionT]))
+            ListHead ListLast ListIndexed ListReverse RecordLit
+            UnionLit RecordT UnionT Some None]))
 
 (defprotocol IBetaNormalize
   (beta-normalize [this]
@@ -153,9 +153,8 @@
                   optional (->App (->OptionalT) typ)
                   just     (->Lam "a"
                                   typ
-                                  (->OptionalLit typ'
-                                                 (->Var "a" 0)))
-                  nothing  (->OptionalLit typ nil)
+                                  (->Some (->Var "a" 0)))
+                  nothing  (->App (->None) typ)
                   res (->App (->App (->App a' optional)
                                    just)
                              nothing)]
@@ -207,13 +206,19 @@
             (and (instance? App f')
                  (instance? ListHead (:a f'))
                  (instance? ListLit a'))
-            (beta-normalize (->OptionalLit (:b f') (first (:exprs a'))))
+            (beta-normalize
+              (if-let [el (first (:exprs a'))]
+                (->Some el)
+                (->App (->None) (:b f'))))
 
             ;; ListLast
             (and (instance? App f')
                  (instance? ListLast (:a f'))
                  (instance? ListLit a'))
-            (beta-normalize (->OptionalLit (:b f') (last (:exprs a'))))
+            (beta-normalize
+              (if-let [el (last (:exprs a'))]
+                (->Some el)
+                (->App (->None) (:b f'))))
 
             ;; ListIndexed
             (and (instance? App f')
@@ -240,20 +245,26 @@
                          (:b f'))]
               (beta-normalize (->ListLit typ? (reverse xs))))
 
-            ;; OptionalFold
+            ;; OptionalFold - None
             (and (instance? App          f')
                  (instance? App          (:a f'))
                  (instance? App          (:a (:a f')))
                  (instance? App          (:a (:a (:a f'))))
                  (instance? OptionalFold (:a (:a (:a (:a f')))))
-                 (instance? OptionalLit  (:b (:a (:a f')))))
-            (let [nothing  a'
-                  just     (:b f')
-                  val?     (:val? (:b (:a (:a f'))))]
-              (beta-normalize
-                (if val?
-                  (->App just val?)
-                  nothing)))
+                 (instance? App          (:b (:a (:a f'))))
+                 (instance? None         (:a (:b (:a (:a f'))))))
+            (beta-normalize a')
+
+            ;; OptionalFold - Some
+            (and (instance? App          f')
+                 (instance? App          (:a f'))
+                 (instance? App          (:a (:a f')))
+                 (instance? App          (:a (:a (:a f'))))
+                 (instance? OptionalFold (:a (:a (:a (:a f')))))
+                 (instance? Some         (:b (:a (:a f')))))
+            (let [just     (:b f')
+                  val      (:e (:b (:a (:a f'))))]
+              (beta-normalize (->App just val)))
 
             :else (->App f' a'))))))
 
@@ -516,10 +527,19 @@
   (beta-normalize [this] this)
 
   dhall_clj.ast.OptionalLit
-  (beta-normalize [{:keys [val?] :as this}]
-    (-> this
-       (update :type beta-normalize)
-       (assoc  :val? (when val? (beta-normalize val?)))))
+  (beta-normalize [{:keys [type val?]}]
+    ;; FIXME: attach meta here when creating the new nodes
+    (beta-normalize
+      (if val?
+        (->Some val?)
+        (->App (->None) type))))
+
+  dhall_clj.ast.Some
+  (beta-normalize [this]
+    (update this :e beta-normalize))
+
+  dhall_clj.ast.None
+  (beta-normalize [this] this)
 
   dhall_clj.ast.OptionalFold
   (beta-normalize [this] this)

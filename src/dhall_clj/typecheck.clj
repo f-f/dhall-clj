@@ -446,6 +446,18 @@
   (typecheck [this _ctx]
     (->Pi "_" (->Const :type) (->Const :type)))
 
+  dhall_clj.ast.None
+  (typecheck [this _ctx]
+    (->Pi "A" (->Const :type) (->App (->OptionalT) (->Var "A" 0))))
+
+  dhall_clj.ast.Some
+  (typecheck [{:keys [e] :as this} ctx]
+    (let [eT (typecheck e ctx)
+          k  (-> eT (typecheck ctx) beta-normalize)]
+      (when-not (= k (->Const :type))
+        (fail/invalid-some! ctx this {:value e :type eT :kind k}))
+      (->App (->OptionalT) eT)))
+
   dhall_clj.ast.OptionalLit
   (typecheck [{:keys [type val?] :as this} ctx]
     (let [k (-> type (typecheck ctx) beta-normalize)]

@@ -145,6 +145,7 @@
 (typecheck-ex invalid-optional-type)
 (typecheck-ex invalid-output-type)
 (typecheck-ex invalid-predicate)
+(typecheck-ex invalid-some)
 (typecheck-ex list-append-mismatch)
 (typecheck-ex mismatched-list-elements)
 (typecheck-ex missing-field)

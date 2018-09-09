@@ -81,6 +81,8 @@
 (defrecord ListReverse [])
 (defrecord OptionalT [])
 (defrecord OptionalLit [type val?])
+(defrecord Some [e])
+(defrecord None [])
 (defrecord OptionalFold [])
 (defrecord OptionalBuild [])
 (defrecord RecordT [kvs])
@@ -328,6 +330,13 @@
     (-> this
        (update :type shift diff var)
        (assoc :val? (when val? (shift val? diff var)))))
+
+  Some
+  (shift [this diff var]
+    (update this :e shift diff var))
+
+  None
+  (shift [this diff var] this)
 
   OptionalFold
   (shift [this diff var] this)
@@ -618,6 +627,13 @@
     (-> this
        (update :type subst var e)
        (assoc :val?  (when val? (subst val? var e)))))
+
+  Some
+  (subst [this var e]
+    (update this :e subst var e))
+
+  None
+  (subst [this var e] this)
 
   OptionalFold
   (subst [this var e] this)

@@ -233,6 +233,13 @@
        (update :type alpha-normalize)
        (assoc  :val? (when val? (alpha-normalize val?)))))
 
+  dhall_clj.ast.Some
+  (alpha-normalize [this]
+    (update this :e alpha-normalize))
+
+  dhall_clj.ast.None
+  (alpha-normalize [this] this)
+
   dhall_clj.ast.OptionalFold
   (alpha-normalize [this] this)
 

@@ -250,6 +250,7 @@
     (case first-tag
       :Bool-raw     (->BoolT)
       :Optional-raw (->OptionalT)
+      :None-raw     (->None)
       :Natural-raw  (->NaturalT)
       :Integer-raw  (->IntegerT)
       :Double-raw   (->DoubleT)
@@ -353,10 +354,17 @@
 (defmethod expr :application-expression [{:keys [c t]}]
   (if (> (count c) 1)
     (let [exprs (remove #(= :whitespace-chunk (:t %)) c)
-          constructors? (= :constructors (-> c first :t))]
+          constructors? (= :constructors (-> c first :t))
+          some? (= :Some (-> c first :t))]
       (loop [more (nnext exprs)
-             app (if constructors?
+             app (cond
+                   constructors?
                    (->Constructors (expr (second exprs)))
+
+                   some?
+                   (->Some (expr (second exprs)))
+
+                   :else
                    (->App
                      (expr (first exprs))
                      (expr (second exprs))))]
