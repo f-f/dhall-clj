@@ -6,6 +6,7 @@
              [dhall-clj.import :refer [resolve-imports]]
              [dhall-clj.beta-normalize :refer [beta-normalize]]
              [dhall-clj.state :as s]
+             [dhall-clj.test-utils :refer :all]
              [me.raynes.fs :as fs]))
 
 ;; Simple tests from the spec
@@ -53,64 +54,23 @@
 
 ;; Haskell implementation test suite
 
-;; Credit: https://clojuredocs.org/clojure.core/tree-seq#example-54d33991e4b0e2ac61831d15
-(defn list-files [basepath]
-  (let [directory (clojure.java.io/file basepath)
-        dir? #(.isDirectory %)]
-    ;; we want only files, therefore filter items that are not directories.
-    (filter (comp not dir?)
-            (tree-seq dir? #(.listFiles %) directory))))
-
 (def test-folder "dhall-haskell/tests/normalization")
-
-(defn all-testcases
-  "
-  Returns a record of records {'testcase name' {:actual Text, :expected Text}}
-  They should be parsed, typechecked and normalized, and checked for equality
-  "
-  []
-  (let [all-files (list-files test-folder)
-        map-of-testcases (group-by #(->> % str (drop-last 7) (apply str)) all-files)]
-    (map-vals (fn [[actual expected]]
-                {:actual   (slurp actual)
-                 :expected (slurp expected)})
-              map-of-testcases)))
 
 (def problematic
   "Here we list all the tests that blow up, so we categorize and exclude them"
-
-  [
-   ;; No matching clause: :in-raw
+  [;; No matching clause: :in-raw
    "dhall-haskell/tests/normalization/examples/List/indexed/0"
    "dhall-haskell/tests/normalization/examples/List/indexed/1"
-
-   ;; java.lang.StackOverflowError: null
-   "dhall-haskell/tests/normalization/examples/List/shifted/0"
-   "dhall-haskell/tests/normalization/examples/List/shifted/1"
 
    ;; Actual test failures for results mismatch
    "dhall-haskell/tests/normalization/remoteSystems"
    "dhall-haskell/tests/normalization/examples/Natural/fold/1"
-   "dhall-haskell/tests/normalization/examples/List/iterate/0"
-   "dhall-haskell/tests/normalization/examples/List/generate/0"
-   "dhall-haskell/tests/normalization/examples/Natural/enumerate/0"
-   "dhall-haskell/tests/normalization/examples/List/filter/0"
-   "dhall-haskell/tests/normalization/examples/Text/concatMapSep/0"
-   "dhall-haskell/tests/normalization/examples/Text/concat/0"
-   "dhall-haskell/tests/normalization/examples/List/map/0"
-   "dhall-haskell/tests/normalization/examples/Text/concatSep/0"
-   "dhall-haskell/tests/normalization/examples/List/concat/0"
-   "dhall-haskell/tests/normalization/examples/List/filter/1"
-   "dhall-haskell/tests/normalization/examples/List/unzip/0"
-   "dhall-haskell/tests/normalization/examples/List/fold/2"
    "dhall-haskell/tests/normalization/examples/Bool/or/0"
-   "dhall-haskell/tests/normalization/examples/List/concatMap/0"
    "dhall-haskell/tests/normalization/examples/List/any/0"
-   "dhall-haskell/tests/normalization/examples/List/fold/1"
-   "dhall-haskell/tests/normalization/examples/List/all/0"])
+   "dhall-haskell/tests/normalization/examples/List/fold/1"])
 
 (defn valid-testcases []
-  (let [all (all-testcases)]
+  (let [all (success-testcases test-folder)]
     (apply dissoc all problematic)))
 
 (deftest normalization-suite
@@ -123,7 +83,7 @@
                   expr
                   (resolve-imports (s/new))
                   beta-normalize))]
-      ;;(println "TESTCASE" testcase)
+      (println "TESTCASE" testcase)
       (testing testcase
         (is (= (f actual)
                (f expected)))))))
