@@ -30,15 +30,15 @@ For more inspiration about possible use cases, see the wiki page
 *Note: this is quite alpha. Things might be broken, so don't hesitate to [open an issue][issues].*
 
 We basically support all of Dhall `v2.0.0`, except the following:
-- Http imports (tracked in #7)
-- Binary serialization/deserialization (tracked in #4)
-- Imports semantic integrity checks (hashing - tracked in #5)
-- Caching of hashed imports (tracked in #8)
-- The import alternative operator `?` (tracked in #12)
+- [#7](../../issues/7): Http imports
+- [#4](../../issues/4): Binary serialization/deserialization
+- [#5](../../issues/5): Imports semantic integrity checks (hashing)
+- [#8](../../issues/8): Caching of hashed imports
+- [#12](../../issues/12): The import alternative operator `?`
 
 In addition to this, there's known bugs:
 - `emit` really supports a subset of the language, e.g. no `Natural/build`
-- some normalization tests are broken, so don't trust this too much
+- some normalization tests are not passing, so some normalization might do funky things
 
 ## HOWTO
 
@@ -46,14 +46,15 @@ In addition to this, there's known bugs:
 (require [dhall-clojure.core :refer [input input-ast]])
 
 ;; We can run Dhall expression with the `input` function
+
 (input "True && False")
 
 ;; => false
 
 
 ;; We can even import functions from Dhall, and execute them:
-(def build-info (input "λ(major : Natural) → { version = \"${Natural/show major}.0\" }"))
 
+(def build-info (input "λ(major : Natural) → { version = \"${Natural/show major}.0\" }"))
 (build-info 1)
 
 ;; => {"version" "1.0"}
@@ -66,6 +67,7 @@ In addition to this, there's known bugs:
 
 ;; However, if you would not like to emit & eval Clojure forms directly,
 ;; the function `input-ast` returns the AST constructed of the normalized expression:
+
 (input-ast "1 + 1")
 
 ;; => #dhall_clj.ast.NaturalLit {:n 2}
