@@ -1,5 +1,6 @@
 (ns dhall-clj.core-test
   (:require  [clojure.test :refer :all]
+             [dhall-clj.ast :refer :all]
              [dhall-clj.core :refer [input input-ast]]))
 
 
@@ -9,7 +10,9 @@
   [[((input "λ(n : Natural) → { a = \"${Natural/show n}.0\", b = \"foo\" }") 1)
     {"a" "1.0" "b" "foo"}]
    [(input "True && False")
-    false]])
+    false]
+   [(input-ast "src" "1 + 1")
+    (->NaturalLit 2)]])
 
 
 (deftest input-simple-test
