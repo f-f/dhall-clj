@@ -14,11 +14,9 @@
                  [cc.qbits/ex "0.1.2"]
                  [com.gfredericks/catch-data "0.2.0"]
                  [medley "1.0.0"]
-                 ^{:voom {:repo "https://github.com/f-f/instaparse" :branch "master"}}
-                 [instaparse "1.4.8-20180320_231130-g3f0ce6d"]]
+                 [f-f/instaparse "1.4.9-patch-alt"]]
   :plugins [[lein-shell "0.5.0"]
-            [lein-cloverage "1.0.11"]
-            [lein-voom "0.1.0-20180617_140646-g0ba7ec8"]]
+            [lein-cloverage "1.0.11"]]
   :prep-tasks [["shell" "cp" "dhall-lang/standard/dhall.abnf" "resources/"] "javac" "compile"]
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.10.0-alpha2"]]
                    :plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]]}
