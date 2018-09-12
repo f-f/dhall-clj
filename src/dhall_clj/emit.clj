@@ -151,7 +151,15 @@
 
   dhall_clj.ast.TextLit
   (emit [{:keys [chunks]}]
-    (apply str chunks))
+    (if (every? string? chunks)
+      (apply str chunks)
+      `(apply
+         str
+         ~(mapv
+            #(if (string? %)
+               %
+               (emit %))
+           chunks))))
 
   dhall_clj.ast.TextAppend
   (emit [{:keys [a b]}]
