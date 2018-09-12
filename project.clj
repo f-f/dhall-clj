@@ -1,4 +1,4 @@
-(defproject dhall-clj "0.1.0-SNAPSHOT"
+(defproject dhall-clj "0.1.0"
   :description "Dhall compiler to and from Clojure"
   :url "https://github.com/f-f/dhall-clj"
   :license {:name "Eclipse Public License"
