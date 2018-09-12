@@ -315,9 +315,10 @@
   (typecheck [{:keys [chunks] :as this} ctx]
     (mapv
       (fn [c]
-        (let [cT (-> c (typecheck ctx) beta-normalize)]
-          (when-not (instance? TextT cT)
-            (fail/cant-interpolate! ctx this {:chunk c :chunk-type cT}))))
+        (when-not (string? c)
+          (let [cT (-> c (typecheck ctx) beta-normalize)]
+            (when-not (instance? TextT cT)
+              (fail/cant-interpolate! ctx this {:chunk c :chunk-type cT})))))
       chunks)
     (->TextT))
 

@@ -15,7 +15,11 @@
 (def typecheck-cases
   [[(-> "(\\(a : {}) -> \\(a : Natural) -> a) {=} 1"
        parse expr (typecheck {}))
-    (->NaturalT)]])
+    (->NaturalT)]
+   [(-> "\"${Natural/show 1}.0\""
+       parse expr (typecheck {}))
+    (->TextT)]])
+
 
 (deftest typecheck-simple-test
   (doseq [[in out] typecheck-cases]
