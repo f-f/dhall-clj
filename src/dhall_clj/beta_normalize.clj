@@ -578,8 +578,9 @@
                 (and (instance? RecordLit r)
                      (empty? r))              l
                 (and (instance? RecordLit l)
-                     (instance? RecordLit r)) (beta-normalize
-                                                (->RecordLit (merge-with decide (:kvs l) (:kvs r))))
+                     (instance? RecordLit r)) (->RecordLit
+                                                (->> (merge-with decide (:kvs l) (:kvs r))
+                                                   (into (sorted-map))))
                 :else                         (->Combine l r)))]
       (decide (beta-normalize a) (beta-normalize b))))
 
@@ -592,8 +593,9 @@
                 (and (instance? RecordT r)
                      (empty? r))            l
                 (and (instance? RecordT l)
-                     (instance? RecordT r)) (beta-normalize
-                                              (->RecordT (merge-with decide (:kvs l) (:kvs r))))
+                     (instance? RecordT r)) (->RecordT
+                                              (->> (merge-with decide (:kvs l) (:kvs r))
+                                                 (into (sorted-map))))
                 :else                       (->CombineTypes l r)))]
       (decide (beta-normalize a) (beta-normalize b))))
 
@@ -606,8 +608,9 @@
                 (and (instance? RecordLit r)
                      (empty? r))              l
                 (and (instance? RecordLit l)
-                     (instance? RecordLit r)) (beta-normalize
-                                                (->RecordLit (merge (:kvs l) (:kvs r))))
+                     (instance? RecordLit r)) (->RecordLit
+                                                (->> (merge (:kvs l) (:kvs r))
+                                                   (into (sorted-map))))
                 :else                         (->Prefer l r)))]
       (decide (beta-normalize a) (beta-normalize b))))
 
