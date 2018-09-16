@@ -65,8 +65,6 @@
    ;; Actual test failures for results mismatch
    "dhall-haskell/tests/normalization/remoteSystems"
    "dhall-haskell/tests/normalization/examples/Natural/fold/1"
-   "dhall-haskell/tests/normalization/examples/Bool/or/0"
-   "dhall-haskell/tests/normalization/examples/List/any/0"
    "dhall-haskell/tests/normalization/examples/List/fold/1"])
 
 (defn valid-testcases []

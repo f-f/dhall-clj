@@ -316,7 +316,7 @@
                          r)
                        (if (judgmentally-equal l r)
                          l
-                         (->BoolAnd l r)))))]
+                         (->BoolOr l r)))))]
       (decide (beta-normalize a) (beta-normalize b))))
 
   dhall_clj.ast.BoolEQ
