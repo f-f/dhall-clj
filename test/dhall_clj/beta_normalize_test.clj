@@ -58,14 +58,10 @@
 
 (def problematic
   "Here we list all the tests that blow up, so we categorize and exclude them"
-  [;; No matching clause: :in-raw
-   "dhall-haskell/tests/normalization/examples/List/indexed/0"
-   "dhall-haskell/tests/normalization/examples/List/indexed/1"
+  [
+   ;; Waiting for single quote strings to be standardized
+   "dhall-haskell/tests/normalization/remoteSystems"])
 
-   ;; Actual test failures for results mismatch
-   "dhall-haskell/tests/normalization/remoteSystems"
-   "dhall-haskell/tests/normalization/examples/Natural/fold/1"
-   "dhall-haskell/tests/normalization/examples/List/fold/1"])
 
 (defn valid-testcases []
   (let [all (success-testcases test-folder)]

@@ -35,10 +35,7 @@ We basically support all of Dhall `v2.0.0`, except the following:
 - [#5](../../issues/5): Imports semantic integrity checks (hashing)
 - [#8](../../issues/8): Caching of hashed imports
 - [#12](../../issues/12): The import alternative operator `?`
-
-In addition to this, there's known bugs:
-- `emit` really supports a subset of the language, e.g. no `Natural/build`
-- some normalization tests are not passing, so some normalization might do funky things
+- The Dhall compilation works otherwise, but the translation to Clojure data structures is partial for now, e.g. no `Natural/build`
 
 ## HOWTO
 
