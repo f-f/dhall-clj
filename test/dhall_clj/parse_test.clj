@@ -33,7 +33,7 @@
     (->TextLit ["ABC"])]
 
    ["\"\""
-    (->TextLit [])]
+    (->TextLit [""])]
 
    ["\"\\\"aaaa\""
     (->TextLit ["\\\"aaaa"])]
@@ -46,6 +46,9 @@
 
    ["''a${1}b''"
     (->TextLit ["a" (->NaturalLit 1) "b"])]
+
+   ["''${Bool}${Natural}''"
+    (->TextLit ["" (->BoolT) "" (->NaturalT) ""])]
 
    ["[1]"
     (->ListLit nil [(->NaturalLit 1)])]

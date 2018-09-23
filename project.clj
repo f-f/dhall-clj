@@ -8,6 +8,7 @@
                  [org.clojure/spec.alpha "0.2.176"]
                  [org.clojure/tools.reader "1.3.0"]
                  [org.clojure/core.match "0.3.0-alpha5"]
+                 [org.clojure/test.check "0.10.0-alpha3"]
                  [me.raynes/fs "1.4.6"]
                  [digest "1.4.8"]
                  [lambdaisland/uri "1.1.0"]

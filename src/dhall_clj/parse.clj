@@ -509,7 +509,7 @@
         ;; so that we collapse the contiguous strings in a single chunk,
         ;; while skipping the interpolation expressions
         (loop [children (-> children first :c rest butlast) ;; Skip the quotes
-               acc nil
+               acc ""
                chunks []]
           (if (seq children)
             (let [chunk (first children)
@@ -519,31 +519,27 @@
                        (str acc (apply str content))
                        chunks)
                 (recur (rest children)
-                       nil
-                       (conj chunks (or acc "") (expr (nth content 1))))))
+                       ""
+                       (conj chunks acc (expr (nth content 1))))))
             ;; If we have no children left to process,
             ;; we return the chunks we have, plus the accomulator
-            (if-not acc
-              chunks
-              (conj chunks acc))))
+            (conj chunks acc)))
         ;; Otherwise it's a single quote literal,
         ;; so we recur over the children until we find an ending literal.
         ;; As above, we make expressions out of interpolation syntax
         (loop [children (-> children first :c second :c)
-               acc nil
+               acc ""
                chunks []]
           (if (= children ["''"])
-            (if-not acc  ;; If we have chars left in acc
-              chunks
-              (conj chunks acc))
+            (conj chunks acc)
             (if (not= (first children) "${")  ;; Check if interpolation
               ;; If not we just add the string and recur
               (recur (-> children second :c)
                      (str acc (first children))
                      chunks)
               (recur (-> children (nth 3) :c)
-                     nil
-                     (conj chunks (or acc "") (expr (second children)))))))))))
+                     ""
+                     (conj chunks acc (expr (second children)))))))))))
 
 ;; Default case, we end up here when there is no matches
 (defmethod expr :default [e]

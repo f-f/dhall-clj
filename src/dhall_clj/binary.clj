@@ -144,15 +144,15 @@
                 (decbor a)
                 (decbor b)))
           4  (let [[typ & elems] (rest e)]
-               (if (and (empty? elems) (not typ))
+               (if (and (not (seq elems)) (nil? typ))
                  (fail/empty-list-must-have-type! e)
                  (->ListLit (decbor typ) (mapv decbor (or elems [])))))
           5  (if (= (count e) 3)
                (let [[typ val] (rest e)]
                  (assert-present! val e)
-                 (if typ
-                   (->OptionalLit (decbor typ) (decbor val))
-                   (->Some (decbor val))))
+                 (if (nil? typ)
+                   (->Some (decbor val))
+                   (->OptionalLit (decbor typ) (decbor val))))
                (let [typ (second e)]
                  (assert-present! typ e)
                  (->OptionalLit (decbor typ) nil)))
@@ -160,9 +160,9 @@
                    a' (decbor a)
                    b' (decbor b)]
                (assert-len! e 3)
-               (if typ?
+               (if (nil? typ?)
                  (->Merge a' b' (decbor typ?))
-                 (->Merge a' b' nil)))
+                 (->Merge a' b' (decbor typ?))))
           7  (->RecordT   (map-vals decbor (second e)))
           8  (->RecordLit (map-vals decbor (second e)))
           9  (let [[rec k] (rest e)]
@@ -170,7 +170,7 @@
                (->Field (decbor rec) k))
           10 (let [[rec & ks] (rest e)]
                (assert-len! e 3)
-               (->Project (decbor e) ks))
+               (->Project (decbor rec) ks))
           11 (->UnionT (map-vals decbor (second e)))
           12 (let [[k v kvs] (rest e)]
                (assert-len! e 4)
@@ -182,7 +182,18 @@
           15 (->NaturalLit (second e))
           16 (->IntegerLit (second e))
           17 (->DoubleLit (second e))
-          18 (->TextLit (mapv #(if (string? %) % (decbor %)) (rest e)))
+          18 (->TextLit
+               ;; Here we exploit the fact that Text literals always have an odd count
+               ;; and they alternate strings and exprs.
+               ;; So we get the first string and then loop until we don't have any more
+               ;; tuples of exprs and strings
+               (let [[str1 & chunks] (rest e)]
+                 (loop [res [str1]
+                        cs  chunks]
+                   (if (seq cs)
+                     (let [[e s & more] cs]
+                       (recur (conj res (decbor e) s) more))
+                     res))))
           ;; TODO imports
           25 (if (= 4 (count e))
                (let [[label body next] (rest e)]
