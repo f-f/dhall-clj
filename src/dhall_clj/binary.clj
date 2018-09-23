@@ -2,7 +2,8 @@
   (:require [clojure.string :as string]
             [medley.core :refer [map-vals]]
             [dhall-clj.ast :refer :all]
-            [clj-cbor.core :as cbor])
+            [clj-cbor.core :as cbor]
+            [dhall-clj.fail :as fail])
   (:import [dhall_clj.ast App]))
 
 ;; Main API
@@ -10,24 +11,193 @@
 (declare cbor)
 (declare decbor)
 
-(def protocol-version "1.1")
+(def protocol-version
+  "The currently supported version for the binary protocol"
+  "1.1")
 
-(defn encode [e]
-  (cbor/encode [protocol-version (cbor e)]))
+(def supported-versions
+  "A list of versions that will be accepted for deserialization"
+  ["1.1" "1.0"])
 
-(defn decode [e]
-  (decbor (second (cbor/decode e)))) ;; TODO: this `second` is not that nice
+(defn encode
+  "Encode `e` (which should be Dhall AST) into its binary form.
+  `version` is one of `supported-versions`. Will return a `ByteArray`."
+  ([e] (encode e protocol-version))
+  ([e version]
+   (if (some #{version} supported-versions)
+     (cbor/encode [version (cbor e)])
+     (fail/unsupported-version-encoding! version supported-versions))))
+
+(defn decode
+  "Takes a bytearray `binary-expr`, and tries to decode it into Dhall AST.
+  Will throw an exception of type `dhall-clj.fail/binary` on malformed input."
+  [^bytes binary-expr]
+  (let [[version expression] (cbor/decode binary-expr)]
+    (if (some #{version} supported-versions)
+      (decbor expression)
+      (fail/unsupported-version-decoding! version supported-versions))))
 
 
+;;;; CBOR -> Dhall AST
+
+(defn- assert-len!
+  "Given a seq `e`, it fails if it's shorter than `n`"
+  [e n]
+  (when (< (count e) n)
+    (fail/vector-too-short! e n)))
+
+(defn- assert-present!
+  "Given a value `val` contained in `e`, throws if `val` is `nil`"
+  [val e]
+  (when-not e
+    (fail/empty-val! e)))
 
 (defn decbor
-  "Given the clj-cbor representation of an expression,
-  build the Dhall AST"
+  "Given the clj-cbor representation of an expression, build the Dhall AST.
+  Will throw an exception of type `:dhall-clj.fail/binary` on malformed input."
   [e]
-  "TODO")
+  (cond
+    (string? e)
+    (condp = e
+      "Natural/build"     (->NaturalBuild)
+      "Natural/fold"      (->NaturalFold)
+      "Natural/isZero"    (->NaturalIsZero)
+      "Natural/even"      (->NaturalEven)
+      "Natural/odd"       (->NaturalOdd)
+      "Natural/toInteger" (->NaturalToInteger)
+      "Natural/show"      (->NaturalShow)
+      "Integer/toDouble"  (->IntegerToDouble)
+      "Integer/show"      (->IntegerShow)
+      "Double/show"       (->DoubleShow)
+      "List/build"        (->ListBuild)
+      "List/fold"         (->ListFold)
+      "List/length"       (->ListLength)
+      "List/head"         (->ListHead)
+      "List/last"         (->ListLast)
+      "List/indexed"      (->ListIndexed)
+      "List/reverse"      (->ListReverse)
+      "Optional/fold"     (->OptionalFold)
+      "Optional/build"    (->OptionalBuild)
+      "Bool"              (->BoolT)
+      "Optional"          (->OptionalT)
+      "None"              (->None)
+      "Natural"           (->NaturalT)
+      "Integer"           (->IntegerT)
+      "Double"            (->DoubleT)
+      "Text"              (->TextT)
+      "List"              (->ListT)
+      "Type"              (->Const :type)
+      "Kind"              (->Const :kind)
+      (->Var e 0)) ;; If no builtins match, then it's a variable
+
+    (integer? e)
+    (->Var "_" e)
+
+    (boolean? e)
+    (->BoolLit e)
+
+    (vector? e)
+    (let [;; Here we fail because if we got an array it must have at least
+          ;; - the tag representing what it is
+          ;; - at least one element of information
+          _   (assert-len! e 2)
+          tag (first e)]
+      (if (string? tag)
+        (->Var tag (second e))
+        (condp = tag
+          0  (let [_ (assert-len! e 3)
+                   app (rest e)
+                   f (decbor (first app))
+                   args (mapv decbor (rest app))]
+               (reduce ->App f args))
+          1  (if (= 3 (count e))
+               (let [[typ body] (rest e)]
+                 (->Lam "_" (decbor typ) (decbor body)))
+               (let [[arg typ body] (rest e)]
+                 (assert-len! e 4)
+                 (when (= arg "_")
+                   (fail/fn-label-mismatch! arg e))
+                 (->Lam arg (decbor typ) (decbor body))))
+          2  (if (= 3 (count e))
+               (let [[typ body] (rest e)]
+                 (->Pi "_" (decbor typ) (decbor body)))
+               (let [[arg typ body] (rest e)]
+                 (assert-len! e 4)
+                 (when (= arg "_")
+                   (fail/fn-label-mismatch! arg e))
+                 (->Pi arg (decbor typ) (decbor body))))
+          3  (let [_ (assert-len! e 4)
+                   [op a b] (rest e)]
+               ((condp = op
+                  0  ->BoolOr
+                  1  ->BoolAnd
+                  2  ->BoolEQ
+                  3  ->BoolNE
+                  4  ->NaturalPlus
+                  5  ->NaturalTimes
+                  6  ->TextAppend
+                  7  ->ListAppend
+                  8  ->Combine
+                  9  ->Prefer
+                  10 ->CombineTypes
+                  11 ->ImportAlt)
+                (decbor a)
+                (decbor b)))
+          4  (let [[typ & elems] (rest e)]
+               (if (and (empty? elems) (not typ))
+                 (fail/empty-list-must-have-type! e)
+                 (->ListLit (decbor typ) (mapv decbor (or elems [])))))
+          5  (if (= (count e) 3)
+               (let [[typ val] (rest e)]
+                 (assert-present! val e)
+                 (if typ
+                   (->OptionalLit (decbor typ) (decbor val))
+                   (->Some (decbor val))))
+               (let [typ (second e)]
+                 (assert-present! typ e)
+                 (->OptionalLit (decbor typ) nil)))
+          6  (let [[a b typ?] (rest e)
+                   a' (decbor a)
+                   b' (decbor b)]
+               (assert-len! e 3)
+               (if typ?
+                 (->Merge a' b' (decbor typ?))
+                 (->Merge a' b' nil)))
+          7  (->RecordT   (map-vals decbor (second e)))
+          8  (->RecordLit (map-vals decbor (second e)))
+          9  (let [[rec k] (rest e)]
+               (assert-len! e 3)
+               (->Field (decbor rec) k))
+          10 (let [[rec & ks] (rest e)]
+               (assert-len! e 3)
+               (->Project (decbor e) ks))
+          11 (->UnionT (map-vals decbor (second e)))
+          12 (let [[k v kvs] (rest e)]
+               (assert-len! e 4)
+               (->UnionLit k (decbor v) (map-vals decbor kvs)))
+          13 (->Constructors (decbor (second e)))
+          14 (let [[test then else] (rest e)]
+               (assert-len! e 4)
+               (->BoolIf (decbor test) (decbor then) (decbor else)))
+          15 (->NaturalLit (second e))
+          16 (->IntegerLit (second e))
+          17 (->DoubleLit (second e))
+          18 (->TextLit (mapv #(if (string? %) % (decbor %)) (rest e)))
+          ;; TODO imports
+          25 (if (= 4 (count e))
+               (let [[label body next] (rest e)]
+                 (->Let label nil (decbor body) (decbor next)))
+               (let [[label typ body next] (rest e)]
+                 (assert-len! e 5)
+                 (->Let label (decbor typ) (decbor body) (decbor next))))
+          26 (let [[val typ] (rest e)]
+               (assert-len! e 3)
+               (->Annot (decbor val) (decbor typ))))))))
 
 
-(defn unapply
+;;;; Dhall AST -> CBOR
+
+(defn- unapply
   "When given an expression, if it's a function application (`App`)
   applied to many arguments it will flatten the application and
   return a list like `[f arg1 arg2 ..]`"
@@ -38,7 +208,7 @@
 
 (defprotocol IBinary
   "Interface for serializing expressions in binary format"
-  (cbor [e] "Transform an expression into a CBOR-ready format"))
+  (cbor [e] "Transform an expression into a CBOR-ready Clojure data structure"))
 
 (extend-protocol IBinary
 

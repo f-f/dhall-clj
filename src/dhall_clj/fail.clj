@@ -90,6 +90,64 @@
 
 
 ;;
+;; Serialization
+;;
+
+(defn unsupported-version-encoding!
+  "Throws an ex-info if the version we are trying to encode with is not supported"
+  [version versions]
+  (throw-data
+    "Serialization error: version not supported"
+    {:type ::unsupported-version-encoding
+     :supported-versions versions
+     :current-version version}))
+
+(defn unsupported-version-decoding!
+  "Throws an ex-info if the version we are trying to decode with is not supported"
+  [version versions]
+  (throw-data
+    "Deserialization error: version not supported"
+    {:type ::unsupported-version-decoding
+     :supported-versions versions
+     :current-version version}))
+
+(defn vector-too-short!
+  "Throws an ex-info if the vector `e` has less than `n` elems"
+  [e n]
+  (throw-data
+    "Deserialization error: the provided vector is too short"
+    {:type ::vector-too-short
+     :vec e
+     :expected-count n
+     :actual-count (count e)}))
+
+(defn empty-val!
+  "Throws an ex-info if some data was expected but it's not there"
+  [e]
+  (throw-data
+    "Deserialization error: the provided expression is missing some data"
+    {:type ::empty-val
+     :expression e}))
+
+(defn fn-label-mismatch!
+  "Throws an ex-info if the label of the function being deserialized is not right"
+  [label e]
+  (throw-data
+    "Deserialization error: label of the function cannot be `_`"
+    {:type ::fn-label-mismatch
+     :label label
+     :expr e}))
+
+(defn empty-list-must-have-type!
+  "Throws an ex-info if the list `e` to be deserialized is empty and has an empty type"
+  [e]
+  (throw-data
+    "Deserialization error: empty list with empty type cannot be decoded"
+    {:type ::empty-list-must-have-type
+     :expr e}))
+
+
+;;
 ;; Typecheck
 ;;
 
