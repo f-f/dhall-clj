@@ -26,11 +26,8 @@
                  [f-f/instaparse "1.4.9-patch-alt"]]
   :plugins [[lein-shell "0.5.0"]
             [lein-cloverage "1.0.13" :exclusions [instaparse]]]
-  :prep-tasks [["shell" "cp"
-                ~(path "dhall-lang/standard/dhall.abnf")
-                ~(path "resources/")]
-               "javac" "compile"]
-  :shell {:commands {"cp" {:windows ["cmd" "/c" "copy"]}}}
+  :prep-tasks [["shell" "copy-abnf"] "javac" "compile"]
+  :shell {:commands {"copy-abnf" {:windows ["cmd" "/c" "copy-abnf"]}}}
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.10.0-alpha2"]]
                    :plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]]}
              :uberjar {:aot :all}}
