@@ -1,3 +1,5 @@
+(require '[clojure.java.io :as io])
+(defn path [s] (.replace (.getPath (io/file s)) "\\" "\\\\"))
 (defproject dhall-clj "0.1.0"
   :description "Dhall compiler to and from Clojure"
   :url "https://github.com/f-f/dhall-clj"
@@ -24,7 +26,9 @@
                  [f-f/instaparse "1.4.9-patch-alt"]]
   :plugins [[lein-shell "0.5.0"]
             [lein-cloverage "1.0.13" :exclusions [instaparse]]]
-  :prep-tasks [["shell" "cp" "dhall-lang/standard/dhall.abnf" "resources/"] "javac" "compile"]
+  :prep-tasks [["shell" "scripts/copy-abnf"] "javac" "compile"]
+  :shell {:commands {"scripts/copy-abnf"
+                     {:windows ["cmd" "/c" "scripts\\\\copy-abnf"]}}}
   :profiles {:dev {:dependencies [[org.clojure/test.check "0.10.0-alpha2"]]
                    :plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]]}
              :uberjar {:aot :all}}
