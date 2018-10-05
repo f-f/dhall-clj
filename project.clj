@@ -1,5 +1,3 @@
-(require '[clojure.java.io :as io])
-(defn path [s] (.replace (.getPath (io/file s)) "\\" "\\\\"))
 (defproject dhall-clj "0.1.0"
   :description "Dhall compiler to and from Clojure"
   :url "https://github.com/f-f/dhall-clj"
