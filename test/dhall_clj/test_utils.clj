@@ -1,6 +1,7 @@
 (ns dhall-clj.test-utils
   (:require [medley.core :refer [map-vals]]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clojure.java.io :as io]))
 
 
 ;; Credit: https://clojuredocs.org/clojure.core/tree-seq#example-54d33991e4b0e2ac61831d15
@@ -12,9 +13,11 @@
             (tree-seq dir? #(.listFiles %) directory))))
 
 (defn failure-case?
-  "Given a `File`, will return true if it's a failure test case."
+  "Given a `File`, will return true if it's a failure test case.
+  Note: we try to match both Windows and *nix paths."
   [file]
-  (string/includes? (str file) "/failure/"))
+  (or (string/includes? (str file) "/failure/")
+      (string/includes? (str file) "\\failure\\")))
 
 (defn success-testcases
   "Returns a record of records {'testcase name' {:actual Text, :expected Text}}

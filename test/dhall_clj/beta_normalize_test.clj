@@ -7,7 +7,8 @@
              [dhall-clj.beta-normalize :refer [beta-normalize]]
              [dhall-clj.state :as s]
              [dhall-clj.test-utils :refer :all]
-             [me.raynes.fs :as fs]))
+             [me.raynes.fs :as fs]
+             [clojure.java.io :as io]))
 
 ;; Simple tests from the spec
 
@@ -57,15 +58,18 @@
 (def test-folder "dhall-haskell/tests/normalization")
 
 (def problematic
-  "Here we list all the tests that blow up, so we categorize and exclude them"
+  "Here we list all the tests that blow up, so we categorize and exclude them.
+  Note: they are vectors because the path creation is platform-sensitive."
   [
    ;; Waiting for single quote strings to be standardized
-   "dhall-haskell/tests/normalization/remoteSystems"])
+   ["dhall-haskell" "tests" "normalization" "remoteSystems"]])
 
 
 (defn valid-testcases []
   (let [all (success-testcases test-folder)]
-    (apply dissoc all problematic)))
+    (->> problematic
+       (map #(->> % (apply io/file) str))
+       (apply dissoc all))))
 
 (deftest normalization-suite
   (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]

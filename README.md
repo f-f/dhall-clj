@@ -1,6 +1,7 @@
 # dhall-clj
 
 [![Build Status](https://travis-ci.org/f-f/dhall-clj.svg?branch=master)](https://travis-ci.org/f-f/dhall-clj)
+[![Build status](https://ci.appveyor.com/api/projects/status/l7ntvofkhy9iwh28/branch/master?svg=true)](https://ci.appveyor.com/project/f-f/dhall-clj/branch/master)
 [![Coverage Status](https://coveralls.io/repos/github/f-f/dhall-clj/badge.svg?branch=master)](https://coveralls.io/github/f-f/dhall-clj?branch=master)
 [![Clojars Project](https://img.shields.io/clojars/v/dhall-clj/dhall-clj.svg)](https://clojars.org/dhall-clj/dhall-clj)
 [![cljdoc badge](https://cljdoc.xyz/badge/dhall-clj/dhall-clj)](https://cljdoc.xyz/d/dhall-clj/dhall-clj/CURRENT)
