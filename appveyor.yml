@@ -1,0 +1,18 @@
+platform:
+  - x64
+
+install:
+  - ps: Start-FileDownload 'https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein.bat'
+  - lein self-install
+
+cache:
+  - '%USERPROFILE%\.m2'
+
+build: off
+
+before_test:
+  - lein version
+
+test_script:
+  - git submodule update --init
+  - lein test
