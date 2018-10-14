@@ -7,6 +7,8 @@
             [dhall-clj.parse :refer [parse expr]]
             [dhall-clj.state :as state]
             [dhall-clj.fail :as fail]
+            [dhall-clj.alpha-normalize :refer [alpha-normalize]]
+            [dhall-clj.binary :as binary]
             [clojure.string :as str]
             [dhall-clj.state :as s])
   (:import [dhall_clj.ast Import Local Remote Env Missing]))
@@ -135,8 +137,18 @@
               resolved-expr (resolve-imports
                               dynamic-expr
                               (update state :stack conj data))]
-          ;; TODO: typecheck + normalize
-          resolved-expr))))
+          ;; TODO: typecheck + normalize resolved-expr
+          (if-not hash?
+            resolved-expr
+            ;; TODO TEST THIS
+            (let [expected-hash (str/lower-case hash?)
+                  actual-hash   (-> resolved-expr
+                                   alpha-normalize
+                                   binary/encode
+                                   sha-256)]
+              (if (= expected-hash actual-hash)
+                resolved-expr
+                (fail/hash-mismatch! this actual-hash resolved-expr))))))))
 
   dhall_clj.ast.ImportAlt
   (resolve-imports [this state]
