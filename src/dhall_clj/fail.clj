@@ -47,6 +47,7 @@
 (ex/derive ::missing-file    ::imports)
 (ex/derive ::missing-imports ::imports)
 (ex/derive ::cyclic-import   ::imports)
+(ex/derive ::hash-mismatch   ::imports)
 
 (defn missing-keyword!
   "Throws an ex-info from the `missing` keyword"
@@ -88,6 +89,15 @@
     {:type ::cyclic-import
      :import import}))
 
+(defn hash-mismatch!
+  "Throws an ex-info on hash protection mismatch"
+  [import actual-hash expression]
+  (throw-data
+    "Hash mismatch"
+    {:type ::hash-mismatch
+     :import import
+     :actual-hash actual-hash
+     :expression expression}))
 
 ;;
 ;; Serialization
