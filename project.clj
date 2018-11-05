@@ -6,7 +6,7 @@
   :scm {:name "git" :url "https://github.com/f-f/dhall-clj"}
   :dependencies [[org.clojure/clojure "1.10.0-beta4"]
                  [org.clojure/spec.alpha "0.2.176"]
-                 [org.clojure/tools.reader "1.3.1"]
+                 [org.clojure/tools.reader "1.3.2"]
                  [org.clojure/core.match "0.3.0-alpha5"]
                  [org.clojure/test.check "0.10.0-alpha3"]
                  [me.raynes/fs "1.4.6"]
