@@ -55,14 +55,16 @@
 
 ;; Haskell implementation test suite
 
-(def test-folder "dhall-haskell/tests/normalization")
+(def test-folder "dhall-lang/tests/normalization/success")
 
 (def problematic
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
+   ;; Waiting on issue #23
+   ["dhall-lang" "tests" "normalization" "success" "tutorial" "access" "1"]
    ;; Waiting for single quote strings to be standardized
-   ["dhall-haskell" "tests" "normalization" "remoteSystems"]])
+   ["dhall-lang" "tests" "normalization" "success" "remoteSystems"]])
 
 
 (defn valid-testcases []
@@ -72,16 +74,17 @@
        (apply dissoc all))))
 
 (deftest normalization-suite
-  (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
-    (let [parent (fs/parent testcase)
-          f #(fs/with-mutable-cwd
-               (fs/chdir parent)
-               (-> %
-                  parse
-                  expr
-                  (resolve-imports (s/new))
-                  beta-normalize))]
-      (println "TESTCASE" testcase)
-      (testing testcase
-        (is (= (f actual)
-               (f expected)))))))
+  (let [import-cache (s/new)]
+    (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
+      (let [parent (fs/parent testcase)
+            f #(fs/with-mutable-cwd
+                 (fs/chdir parent)
+                 (-> %
+                    parse
+                    expr
+                    (resolve-imports import-cache)
+                    beta-normalize))]
+        (println "TESTCASE" testcase)
+        (testing testcase
+          (is (= (f actual)
+                 (f expected))))))))
