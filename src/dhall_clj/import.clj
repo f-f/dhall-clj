@@ -4,12 +4,13 @@
             [digest :refer [sha-256]]
             [me.raynes.fs :as fs]
             [clojure.java.io :as io]
+            [clojure.string :as str]
             [dhall-clj.parse :refer [parse expr]]
-            [dhall-clj.state :as state]
             [dhall-clj.fail :as fail]
             [dhall-clj.alpha-normalize :refer [alpha-normalize]]
+            [dhall-clj.beta-normalize :refer [beta-normalize]]
+            [dhall-clj.typecheck :refer [typecheck]]
             [dhall-clj.binary :as binary]
-            [clojure.string :as str]
             [dhall-clj.state :as s])
   (:import [dhall_clj.ast Import Local Remote Env Missing]))
 
@@ -136,19 +137,20 @@
                              (expr-from-import data mode))
               resolved-expr (resolve-imports
                               dynamic-expr
-                              (update state :stack conj data))]
-          ;; TODO: typecheck + normalize resolved-expr
+                              (update state :stack conj data))
+              _             (typecheck resolved-expr {})
+              normalized    (beta-normalize resolved-expr)]
           (if-not hash?
-            resolved-expr
+            normalized
             ;; TODO TEST THIS
             (let [expected-hash (str/lower-case hash?)
-                  actual-hash   (-> resolved-expr
+                  actual-hash   (-> normalized
                                    alpha-normalize
                                    binary/encode
                                    sha-256)]
               (if (= expected-hash actual-hash)
-                resolved-expr
-                (fail/hash-mismatch! this actual-hash resolved-expr))))))))
+                normalized
+                (fail/hash-mismatch! this actual-hash normalized))))))))
 
   dhall_clj.ast.ImportAlt
   (resolve-imports [this state]
