@@ -43,6 +43,7 @@
                      (resolve-imports (s/new))
                      (typecheck {})))
                 nil)]
+      (println "TESTCASE" testcase)
       (testing testcase
         (is (= nil (run)))))))
 

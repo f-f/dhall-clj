@@ -142,7 +142,6 @@
               normalized    (beta-normalize resolved-expr)]
           (if-not hash?
             normalized
-            ;; TODO TEST THIS
             (let [expected-hash (str/lower-case hash?)
                   actual-hash   (-> normalized
                                    alpha-normalize
