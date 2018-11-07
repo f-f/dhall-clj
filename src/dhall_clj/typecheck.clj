@@ -433,7 +433,7 @@
             (->Const :type)
             (->Pi "_"
                   (->App (->ListT) (->Var "a" 0))
-                  (->App (->ListT) (->RecordLit kts))))))
+                  (->App (->ListT) (->RecordT kts))))))
 
   dhall_clj.ast.ListReverse
   (typecheck [this _ctx]
