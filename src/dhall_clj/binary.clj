@@ -13,11 +13,11 @@
 
 (def protocol-version
   "The currently supported version for the binary protocol"
-  "1.1")
+  "3.0.0")
 
 (def supported-versions
   "A list of versions that will be accepted for deserialization"
-  ["1.1" "1.0"])
+  ["3.0.0"])
 
 (defn encode
   "Encode `e` (which should be Dhall AST) into its binary form.
