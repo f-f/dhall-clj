@@ -40,16 +40,7 @@
    ["dhall-lang" "tests" "typecheck" "success" "simple" "access" "1"]
    ;; Waiting on issue #17
    ["dhall-lang" "tests" "typecheck" "success" "simple" "kindParameter"]
-   ["dhall-lang" "tests" "typecheck" "success" "simple" "fieldsAreTypes"]
-   ;; To investigate
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "Natural" "enumerate" "0"]
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "Natural" "enumerate" "1"]
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "List" "indexed" "0"]
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "List" "indexed" "1"]
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "List" "generate" "0"]
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "List" "generate" "1"]
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "List" "iterate" "0"]
-   ["dhall-lang" "tests" "typecheck" "success" "prelude" "List" "iterate" "1"]])
+   ["dhall-lang" "tests" "typecheck" "success" "simple" "fieldsAreTypes"]])
 
 
 (defn valid-testcases []
