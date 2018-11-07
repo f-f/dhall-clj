@@ -82,15 +82,15 @@
     (->RecordLit {})]
 
    ["{fo-o=1, `Text`=2}"
-    (->RecordLit {"`Text`" (->NaturalLit 2)
-                  "fo-o"   (->NaturalLit 1)})]
+    (->RecordLit {"Text" (->NaturalLit 2)
+                  "fo-o" (->NaturalLit 1)})]
 
    ["{ _bar = 4 }"
     (->RecordLit {"_bar" (->NaturalLit 4)})]
 
    ["{fo-o : Natural, `Text` : Text}"
-    (->RecordT {"`Text`" (->TextT)
-                "fo-o"   (->NaturalT)})]
+    (->RecordT {"Text" (->TextT)
+                "fo-o" (->NaturalT)})]
 
    ["{ _bar : Natural }"
     (->RecordT {"_bar" (->NaturalT)})]

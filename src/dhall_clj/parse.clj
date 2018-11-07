@@ -490,9 +490,7 @@
                                 ch
                                 (-> ch :c first))))
                       (apply str))]
-    (if quoted?
-      (str "`" str-label "`")
-      str-label)))
+     str-label))
 
 (defmethod expr :non-empty-list-literal [e]
   ;; Here we always pass the type as nil, because it's a non empty list,
