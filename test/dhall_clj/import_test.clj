@@ -13,11 +13,11 @@
 ;; Simple tests
 
 (def success-cases
-  [["./dhall-haskell/Prelude/package.dhall sha256:b575f038399d47f033b63d6e29ceb8e7778b45765778026c9015ef1d28655cc4"
-    "./dhall-haskell/Prelude/package.dhall"]])
+  [["./dhall-lang/Prelude/package.dhall sha256:9fbb8a6db3360fa30086ea8462dc36087f0e4f87af2a1f802a8befdc5a08f809"
+    "./dhall-lang/Prelude/package.dhall"]])
 
 (def failure-cases
-  [["./dhall-haskell/Prelude/package.dhall sha256:b575f038399d47f033b63d6e29ceb8e7778b45765778026c9015ef1d28655cc3"
+  [["./dhall-lang/Prelude/package.dhall sha256:b575f038399d47f033b63d6e29ceb8e7778b45765778026c9015ef1d28655cc3"
     "Hash mismatch"]])
 
 (deftest import-success-suite
