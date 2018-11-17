@@ -27,9 +27,11 @@
   :prep-tasks [["shell" "scripts/copy-abnf"] "javac" "compile"]
   :shell {:commands {"scripts/copy-abnf"
                      {:windows ["cmd" "/c" "scripts\\\\copy-abnf"]}}}
-  :profiles {:dev {:dependencies [[org.clojure/test.check "0.10.0-alpha2"]]
+  :profiles {:dev {:dependencies [[org.clojure/test.check "0.10.0-alpha2"]
+                                  [cheshire "5.8.1"]]
                    :plugins [[com.jakemccrary/lein-test-refresh "0.22.0"]]}
-             :uberjar {:aot :all}}
+             :uberjar {:aot :all}
+             :test {:dependencies [[cheshire "5.8.1"]]}}
   :test-paths ["test"]
   :test-refresh {:quiet true
                  :changes-only true})

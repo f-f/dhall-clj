@@ -1,8 +1,12 @@
-(ns dhall-clj.parse-test
+(ns dhall-clj.parser-test
   (:require [clojure.test :refer :all]
             [lambdaisland.uri :refer [uri]]
+            [cheshire.core :as json]
+            [clojure.java.io :as io]
+            [dhall-clj.test-utils :refer :all]
             [dhall-clj.ast :refer :all]
-            [dhall-clj.parse :refer [parse expr]]))
+            [dhall-clj.parse :refer [parse expr]]
+            [dhall-clj.binary :as binary]))
 
 (def cases
   [["2.0"
@@ -295,19 +299,66 @@
     (testing (str "Correct Expr Tree for Dhall expr: " dhall)
       (is (= (-> dhall parse expr) tree)))))
 
-(def parser-suite-results
-  [])  ;; TODO: implement forms and add results here
 
-(deftest dhall-haskell-parser-suite
-  (let [dhall-files (-> "dhall-haskell/tests/parser"
-                       clojure.java.io/file
-                       file-seq)  ;; get the list of files in the dir
-        dhall-strings (->> dhall-files
-                         ;; we try here because if it's a folder we cannot slurp it
-                         (mapv #(try (slurp %)
-                                     (catch Exception e nil)))
-                         (remove nil?))]
-    (doseq [[dhall clj-form] (mapv list dhall-strings parser-suite-results)]
-      (testing (str "Dhall expr: " dhall)
-        (let [parsed (expr (parse dhall))]
-          (is (= clj-form parsed)))))))
+;; dhall-lang test suite
+
+(def test-folder "dhall-lang/tests/parser")
+
+(def problematic
+  "Here we list all the tests that blow up, so we categorize and exclude them.
+  Note: they are vectors because the path creation is platform-sensitive."
+  [
+   ;; Waiting on broken single quotes strings
+   ["dhall-lang" "tests" "parser" "success" "interpolatedSingleQuotedString"]
+   ["dhall-lang" "tests" "parser" "success" "escapedSingleQuotedString"]
+   ["dhall-lang" "tests" "parser" "success" "singleQuotedString"]
+   ["dhall-lang" "tests" "parser" "success" "template"]
+   ;; Broken annotations?
+   ["dhall-lang" "tests" "parser" "success" "annotations"]
+   ["dhall-lang" "tests" "parser" "success" "list"]
+   ;; "Failed to build the AST from the parse-tree; unmatched rule `null`"
+   ["dhall-lang" "tests" "parser" "success" "escapedDoubleQuotedString"]
+   ;; No CBOR for imports?
+   ["dhall-lang" "tests" "parser" "success" "collectionImportType"]
+   ["dhall-lang" "tests" "parser" "success" "parenthesizeUsing"]
+   ["dhall-lang" "tests" "parser" "success" "paths"]
+   ["dhall-lang" "tests" "parser" "success" "urls"]
+   ["dhall-lang" "tests" "parser" "success" "environmentVariables"]
+   ;; Broken grammar?
+   ["dhall-lang" "tests" "parser" "success" "pathTermination"]
+   ;; Broken operators?
+   ["dhall-lang" "tests" "parser" "success" "operators"]
+   ;; Something's broken
+   ["dhall-lang" "tests" "parser" "success" "largeExpression"]
+
+   ;; Waiting on issue #12
+   ["dhall-lang" "tests" "parser" "success" "importAlt"]
+   ;; Waiting on issue #27
+   ["dhall-lang" "tests" "parser" "success" "multilet"]
+   ["dhall-lang" "tests" "parser" "success" "reservedPrefix"]
+   ["dhall-lang" "tests" "parser" "success" "let"]
+   ["dhall-lang" "tests" "parser" "success" "label"]
+   ["dhall-lang" "tests" "parser" "success" "quotedLabel"]
+   ;; Waiting on issue #17
+   ["dhall-lang" "tests" "parser" "success" "sort"]])
+
+
+(defn valid-testcases []
+  (let [all (success-testcases test-folder)]
+    (->> problematic
+       (map #(->> % (apply io/file) str))
+       (apply dissoc all))))
+
+(deftest typecheck-success-suite
+  (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
+    (println "TESTCASE" testcase)
+    (testing testcase
+      (is (= (-> actual parse expr binary/cbor)
+             (-> expected json/parse-string))))))
+
+(deftest typecheck-failure-suite
+  (doseq [[testcase dhall] (failure-testcases test-folder)]
+    (println "TESTCASE" testcase)
+    (testing testcase
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Parse error:"
+                            (-> dhall parse expr binary/cbor))))))

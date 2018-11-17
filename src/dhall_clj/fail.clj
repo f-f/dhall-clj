@@ -22,7 +22,7 @@
   "Throws an ex-info from a failure in parsing the string"
   [gll-failure]
   (throw-data
-    "Failed to parse Dhall string"
+    "Parse error: failed to parse Dhall string"
     {:type ::parsing
      :failure gll-failure
      :failure-printed (pr-str gll-failure)}))
@@ -31,7 +31,7 @@
   "Throws an ex-info from a failed build of the AST"
   [tree]
   (throw-data
-    "Failed to build the AST from the parse-tree; unmatched rule `%unmatched~s`"
+    "Parse error: failed to build the AST from the parse-tree; unmatched rule `%unmatched~s`"
     {:type ::ast-building
      :tree tree
      :unmatched (:t tree)
