@@ -39,4 +39,4 @@
   [test-folder]
   (let [files (->> (list-files test-folder)
                  (filter failure-case?))]
-    (into {} (mapv #(vector % (slurp %)) files))))
+    (into {} (mapv #(vector (str %) (slurp %)) files))))

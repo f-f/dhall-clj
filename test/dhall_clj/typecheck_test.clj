@@ -39,6 +39,11 @@
    ;; Waiting on issue #23
    ["dhall-lang" "tests" "typecheck" "success" "simple" "access" "1"]
    ;; Waiting on issue #17
+   ["dhall-lang" "tests" "typecheck" "failure" "hurkensParadox.dhall"]
+   ["dhall-lang" "tests" "typecheck" "success" "recordOfTypes"]
+   ["dhall-lang" "tests" "typecheck" "success" "accessEncodedType"]
+   ["dhall-lang" "tests" "typecheck" "success" "encodedRecordOfTypes"]
+   ["dhall-lang" "tests" "typecheck" "success" "accessType"]
    ["dhall-lang" "tests" "typecheck" "success" "simple" "kindParameter"]
    ["dhall-lang" "tests" "typecheck" "success" "simple" "fieldsAreTypes"]])
 
@@ -66,9 +71,15 @@
         (testing testcase
           (is (= nil (run))))))))
 
+(defn valid-failing-testcases []
+  (let [all (failure-testcases test-folder)]
+    (->> problematic
+       (map #(->> % (apply io/file) str))
+       (apply dissoc all))))
+
 (deftest typecheck-failure-suite
   (let [import-cache (s/new)]
-    (doseq [[testcase dhall] (failure-testcases test-folder)]
+    (doseq [[testcase dhall] (valid-failing-testcases)]
       (let [parent (fs/parent testcase)
             run (fn []
                   (fs/with-mutable-cwd
@@ -78,5 +89,6 @@
                        expr
                        (resolve-imports import-cache)
                        (typecheck {}))))]
+        (println "TESTCASE" testcase)
         (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Typecheck error:"
                               (run)))))))
