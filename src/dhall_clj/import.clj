@@ -138,6 +138,8 @@
               resolved-expr (resolve-imports
                               dynamic-expr
                               (update state :stack conj data))
+              ;; Typecheck with empty context here, as imports cannot
+              ;; contain free variables
               _             (typecheck resolved-expr {})
               normalized    (beta-normalize resolved-expr)]
           (if-not hash?
