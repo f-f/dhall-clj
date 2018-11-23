@@ -631,22 +631,27 @@
   (beta-normalize [this]
     (let [e' (beta-normalize (:e this))]
       (if (instance? UnionT e')
-        (let [kts   (:kvs e')
-              adapt (fn [[k v]]
-                      (->Lam k v (->UnionLit k
-                                             (->Var k 0)
-                                             (dissoc kts k))))]
-          (->RecordLit (map adapt kts)))
+        e'
         (->Constructors e'))))
 
   dhall_clj.ast.Field
   (beta-normalize [{:keys [e k] :as this}]
     (let [e' (beta-normalize e)]
-      (if (instance? RecordLit e')
+      (cond
+        (instance? RecordLit e')
         (if-let [v (get (:kvs e') k)]
           (beta-normalize v)
           (->Field (->RecordLit (map-vals beta-normalize (:kvs e'))) k))
-        (assoc this :e e'))))
+
+        (instance? UnionT e')
+        (if-let [v (get (:kvs e') k)]
+          (->Lam
+            k
+            (beta-normalize v)
+            (->UnionLit k (->Var k 0) (dissoc (:kvs e') k)))
+          (->Field (->UnionT (map-vals beta-normalize (:kvs e'))) k))
+
+        :else (assoc this :e e'))))
 
   dhall_clj.ast.Project
   (beta-normalize [{:keys [e ks] :as this}]

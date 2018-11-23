@@ -36,8 +36,9 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Waiting on issue #23
-   ["dhall-lang" "tests" "typecheck" "success" "simple" "access" "1"]
+   ;; Duplicate fields should fail to typecheck
+   ["dhall-lang" "tests" "typecheck" "failure" "duplicateFields.dhall"]
+
    ;; Waiting on issue #17
    ["dhall-lang" "tests" "typecheck" "failure" "hurkensParadox.dhall"]
    ["dhall-lang" "tests" "typecheck" "success" "recordOfTypes"]

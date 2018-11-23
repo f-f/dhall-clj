@@ -324,7 +324,6 @@
    ["dhall-lang" "tests" "parser" "success" "paths"]
    ["dhall-lang" "tests" "parser" "success" "urls"]
    ["dhall-lang" "tests" "parser" "success" "environmentVariables"]
-   ;; Broken grammar?
    ["dhall-lang" "tests" "parser" "success" "pathTermination"]
    ;; Broken operators?
    ["dhall-lang" "tests" "parser" "success" "operators"]
@@ -339,6 +338,8 @@
    ["dhall-lang" "tests" "parser" "success" "let"]
    ["dhall-lang" "tests" "parser" "success" "label"]
    ["dhall-lang" "tests" "parser" "success" "quotedLabel"]
+   ;; Waiting on issue #28
+   ["dhall-lang" "tests" "parser" "success" "quotedPaths"]
    ;; Waiting on issue #17
    ["dhall-lang" "tests" "parser" "success" "sort"]])
 
@@ -349,14 +350,14 @@
        (map #(->> % (apply io/file) str))
        (apply dissoc all))))
 
-(deftest typecheck-success-suite
+(deftest parser-success-suite
   (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
     (println "TESTCASE" testcase)
     (testing testcase
       (is (= (-> actual parse expr binary/cbor)
              (-> expected json/parse-string))))))
 
-(deftest typecheck-failure-suite
+(deftest parser-failure-suite
   (doseq [[testcase dhall] (failure-testcases test-folder)]
     (println "TESTCASE" testcase)
     (testing testcase

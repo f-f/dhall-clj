@@ -182,6 +182,7 @@
        (def ~sym (partial type-error! ~kw)))))
 
 (typecheck-ex annot-mismatch)
+(typecheck-ex cant-access)
 (typecheck-ex cant-add)
 (typecheck-ex cant-and)
 (typecheck-ex cant-eq)
@@ -190,6 +191,7 @@
 (typecheck-ex cant-multiply)
 (typecheck-ex cant-neq)
 (typecheck-ex cant-or)
+(typecheck-ex cant-project)
 (typecheck-ex cant-text-append)
 (typecheck-ex combine-records-requires-record-type)
 (typecheck-ex constructors-require-a-union-type)
@@ -225,7 +227,6 @@
 (typecheck-ex must-merge-union)
 (typecheck-ex no-dependent-types)
 (typecheck-ex not-a-function)
-(typecheck-ex not-a-record)
 (typecheck-ex record-mismatch)
 (typecheck-ex record-type-mismatch)
 (typecheck-ex type-mismatch)

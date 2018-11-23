@@ -717,33 +717,42 @@
   dhall_clj.ast.Constructors
   (typecheck [{:keys [e] :as this} ctx]
     (typecheck e ctx)
-    (let [e'  (beta-normalize e)
-          kts (if (instance? UnionT e')
-                (:kvs e')
-                (fail/constructors-require-a-union-type!
-                  ctx
-                  this
-                  {:type e :type-normal e'}))]
-      (->RecordT (map-kv
-                   (fn [k v] [k (->Pi k v (->UnionT kts))])
-                   kts))))
+    (let [e' (beta-normalize e)]
+      (if (instance? UnionT e')
+        (typecheck e' ctx)
+        (fail/constructors-require-a-union-type!
+          ctx
+          this
+          {:type e :type-normal e'}))))
 
   dhall_clj.ast.Field
   (typecheck [{:keys [e k] :as this} ctx]
     (let [eT (-> e (typecheck ctx) beta-normalize)]
-      (if-not (instance? RecordT eT)
-        (fail/not-a-record! ctx this {:key k :record e :record-type eT})
+      (cond
+        (instance? RecordT eT)
         (let [kvs (:kvs eT)]
           (typecheck eT ctx) ;; FIXME: is this actually needed?
           (if (contains? kvs k)
             (get kvs k)
-            (fail/missing-field! ctx this {:key k :type eT}))))))
+            (fail/missing-field! ctx this {:key k :type eT})))
+
+        (and (instance? Const eT)
+             (= :type (:c eT)))
+        (let [e' (beta-normalize e)]
+          (if (instance? UnionT e')
+            (let [kts (:kvs e')]
+              (if (contains? kts k)
+                (->Pi k (get kts k) e')
+                (fail/missing-field! ctx this {:key k :type e'})))
+            (fail/cant-access! ctx this {:key k :record e :record-type e'})))
+
+        :else (fail/cant-access! ctx this {:key k :record e :record-type eT}))))
 
   dhall_clj.ast.Project
   (typecheck [{:keys [e ks] :as this} ctx]
     (let [eT (-> e (typecheck ctx) beta-normalize)]
       (if-not (instance? RecordT eT)
-        (fail/not-a-record! ctx this {:keys ks :record e :record-type eT})
+        (fail/cant-project! ctx this {:keys ks :record e :record-type eT})
         (let [kvs (:kvs eT)
               _   (typecheck eT ctx) ;; FIXME: is this actually needed?
               extract (fn [k]

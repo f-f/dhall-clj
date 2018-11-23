@@ -63,8 +63,6 @@
   [
    ;; Waiting on issue #27
    ["dhall-lang" "tests" "normalization" "success" "simple" "letlet"]
-   ;; Waiting on issue #23
-   ["dhall-lang" "tests" "normalization" "success" "haskell-tutorial" "access" "1"]
    ;; Waiting for single quote strings to be standardized
    ["dhall-lang" "tests" "normalization" "success" "remoteSystems"]])
 
