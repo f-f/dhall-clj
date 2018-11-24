@@ -48,6 +48,22 @@
     (->RecordT (into {} kts))))
 
 
+(defn axiom [c]
+  (condp = c
+    :type :kind
+    :kind :sort
+    :sort (fail/untyped! {} (->Const c))))
+
+(defn rule [c1 c2]
+  (condp = [c1 c2]
+    [:type :type] :type
+    [:kind :type] :type
+    [:kind :kind] :kind
+    [:sort :type] :type
+    [:sort :kind] :sort
+    [:sort :sort] :sort
+    :error))
+
 (defprotocol ITypecheck
   (typecheck [this context]
     "Typecheck an expression in a context.
@@ -59,9 +75,7 @@
 
   dhall_clj.ast.Const
   (typecheck [{:keys [c] :as this} ctx]
-    (if (= :type c)
-      (assoc this :c :kind)
-      (fail/untyped! ctx this)))
+    (assoc this :c (axiom c)))
 
   dhall_clj.ast.Var
   (typecheck [{:keys [x i] :as this} ctx]
@@ -92,10 +106,11 @@
           bodyT (-> body (typecheck ctx') beta-normalize)
           bodyK (if (instance? Const bodyT)
                   (:c bodyT)
-                  (fail/invalid-output-type! ctx' this {:body body}))]
-      (if (and (= typeK :type) (= bodyK :kind))
+                  (fail/invalid-output-type! ctx' this {:body body}))
+          k (rule typeK bodyK)]
+      (if (= k :error)
         (fail/no-dependent-types! ctx this {:type type :body body})
-        (->Const bodyK))))
+        (->Const k))))
 
   dhall_clj.ast.App
   (typecheck [{:keys [a b] :as this} ctx]
@@ -514,8 +529,11 @@
                   (= kind0 (->Const :type))
                   :type
 
+                  (= kind0 (->Const :kind))
+                  :kind
+
                   (and (= kind0 (->Const :kind))
-                       (judgmentally-equal t0 (->Const :type)))
+                       (judgmentally-equal t0 (->Const :kind)))
                   :kind
 
                   :else (fail/invalid-field-type! ctx this {:key k0 :type t0}))]
@@ -526,13 +544,18 @@
                                   (fail/field-annotation-mismatch!
                                     ctx
                                     this
-                                    {:key k :type t :key0 k0 :type0 t0 :meta :type}))
-                (->Const :kind) (if-not (= c :kind)
+                                    {:key k :type t :const c :key0 k0 :type0 t0 :meta :type}))
+                (->Const :kind) (when-not (= c :kind)
                                   (fail/field-annotation-mismatch!
                                     ctx
                                     this
-                                    {:key k :type t :key0 k0 :type0 t0 :meta :kind})
-                                  (when-not (judgmentally-equal t (->Const :type))
+                                    {:key k :type t :const c :key0 k0 :type0 t0 :meta :kind}))
+                (->Const :sort) (if-not (= c :sort)
+                                  (fail/field-annotation-mismatch!
+                                    ctx
+                                    this
+                                    {:key k :type t :const c :key0 k0 :type0 t0 :meta :sort})
+                                  (when-not (judgmentally-equal t (->Const :kind))
                                     (fail/invalid-field-type! ctx this {:key k :type t})))
                 (fail/invalid-field-type! ctx this {:key k :type t})))
             (rest kvs))
@@ -550,9 +573,12 @@
                   (= kind0 (->Const :type))
                   :type
 
-                  (and (= kind0 (->Const :kind))
-                       (judgmentally-equal t0 (->Const :type)))
+                  (= kind0 (->Const :kind))
                   :kind
+
+                  (and (= kind0 (->Const :sort))
+                       (judgmentally-equal t0 (->Const :kind)))
+                  :sort
 
                   :else (fail/invalid-field-type! ctx this {:key k0 :value v0}))]
           (map-kv
@@ -563,12 +589,17 @@
                                     (fail/field-mismatch!
                                       ctx
                                       this
-                                      {:key k :value v :key0 k0 :value0 v0 :meta :type}))
-                  (->Const :kind) (if-not (= c :kind)
+                                      {:key k :value v :const c :key0 k0 :value0 v0 :meta :type}))
+                  (->Const :kind) (when-not (= c :kind)
                                     (fail/field-mismatch!
                                       ctx
                                       this
-                                      {:key k :value v :key0 k0 :value0 v0 :meta :kind})
+                                      {:key k :value v :const c :key0 k0 :value0 v0 :meta :kind}))
+                  (->Const :sort) (if-not (= c :sort)
+                                    (fail/field-mismatch!
+                                      ctx
+                                      this
+                                      {:key k :value v :const c :key0 k0 :value0 v0 :meta :sort})
                                     (when-not (judgmentally-equal t (->Const :type))
                                       (fail/invalid-field-type! ctx this {:key k :type t})))
                   (fail/invalid-field! ctx this {:key k :type t}))

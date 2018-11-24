@@ -339,9 +339,7 @@
    ["dhall-lang" "tests" "parser" "success" "label"]
    ["dhall-lang" "tests" "parser" "success" "quotedLabel"]
    ;; Waiting on issue #28
-   ["dhall-lang" "tests" "parser" "success" "quotedPaths"]
-   ;; Waiting on issue #17
-   ["dhall-lang" "tests" "parser" "success" "sort"]])
+   ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])
 
 
 (defn valid-testcases []

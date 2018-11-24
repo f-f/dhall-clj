@@ -88,6 +88,7 @@
       "List"              (->ListT)
       "Type"              (->Const :type)
       "Kind"              (->Const :kind)
+      "Sort"              (->Const :sort)
       (->Var e 0)) ;; If no builtins match, then it's a variable
 
     (integer? e)
@@ -225,9 +226,10 @@
 
   dhall_clj.ast.Const
   (cbor [{:keys [c]}]
-    (if (= c :type)
-      "Type"
-      "Kind"))
+    (condp = c
+      :type "Type"
+      :kind "Kind"
+      :sort "Sort"))
 
   dhall_clj.ast.Var
   (cbor [{:keys [x i]}]
