@@ -39,14 +39,9 @@
    ;; Duplicate fields should fail to typecheck
    ["dhall-lang" "tests" "typecheck" "failure" "duplicateFields.dhall"]
 
-   ;; Waiting on issue #17
+   ;; Waiting on issue #27
    ["dhall-lang" "tests" "typecheck" "failure" "hurkensParadox.dhall"]
-   ["dhall-lang" "tests" "typecheck" "success" "recordOfTypes"]
-   ["dhall-lang" "tests" "typecheck" "success" "accessEncodedType"]
-   ["dhall-lang" "tests" "typecheck" "success" "recordOfRecordOfTypes"]
-   ["dhall-lang" "tests" "typecheck" "success" "accessType"]
-   ["dhall-lang" "tests" "typecheck" "success" "simple" "kindParameter"]
-   ["dhall-lang" "tests" "typecheck" "success" "simple" "fieldsAreTypes"]])
+   ["dhall-lang" "tests" "typecheck" "success" "recordOfRecordOfTypes"]])
 
 
 (defn valid-testcases []

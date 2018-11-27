@@ -315,7 +315,8 @@
       :True-raw     (->BoolLit true)
       :False-raw    (->BoolLit false)
       :Type-raw     (->Const :type)
-      :Kind-raw     (->Const :kind))))
+      :Kind-raw     (->Const :kind)
+      :Sort-raw     (->Const :sort))))
 
 (defmethod expr :reserved-namespaced-raw [e]
   (let [first-tag (-> e :c first :t)]

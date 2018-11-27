@@ -22,7 +22,7 @@
 (def integer (gen/fmap ->IntegerLit gen/int))
 (def bool    (gen/fmap ->BoolLit gen/boolean))
 (def double' (gen/fmap ->DoubleLit (gen/double* {:infinite? false :NaN? false})))
-(def const   (gen/fmap ->Const (gen/elements [:kind :type])))
+(def const   (gen/fmap ->Const (gen/elements [:kind :type :sort])))
 (def var     (gen/fmap (partial apply ->Var) (gen/tuple label gen/nat)))
 (def builtin (gen/elements
                [(->BoolT)
