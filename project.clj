@@ -9,6 +9,7 @@
                  [org.clojure/tools.reader "1.3.2"]
                  [org.clojure/core.match "0.3.0-alpha5"]
                  [org.clojure/test.check "0.10.0-alpha3"]
+                 [org.clojure/data.finger-tree "0.0.3"]
                  [me.raynes/fs "1.4.6"]
                  [digest "1.4.8"]
                  [lambdaisland/uri "1.1.0"]
@@ -33,5 +34,6 @@
              :uberjar {:aot :all}
              :test {:dependencies [[cheshire "5.8.1"]]}}
   :test-paths ["test"]
+  :jvm-opts ["-Xmx2g"]
   :test-refresh {:quiet true
                  :changes-only true})

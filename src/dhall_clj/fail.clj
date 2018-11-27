@@ -53,21 +53,21 @@
   "Throws an ex-info from the `missing` keyword"
   []
   (throw-data
-    "Found `missing` keyword"
+    "Import error: found `missing` keyword"
     {:type ::missing-keyword}))
 
 (defn missing-env!
   "Throws an ex-info from a missing environment variable"
   [name]
   (throw-data
-    "Missing environment variable: `%name~s`"
+    "Import error: missing environment variable: `%name~s`"
     {:type ::missing-env
      :name name}))
 
 (defn missing-file!
   [path import]
   (throw-data
-    "File not found: `%path~s`"
+    "Import error: file not found: `%path~s`"
     {:type ::missing-file
      :path path
      :import import}))
@@ -76,8 +76,9 @@
   "Throws an ex-info from a list of import errors"
   [errors imported]
   (throw-data
-    "Got errors while resolving imports"
+    "Import error: %count~d errors encountered while resolving imports"
     {:type ::missing-imports
+     :count (count errors)
      :errors errors
      :imported imported}))
 
@@ -85,7 +86,7 @@
   "Throws an ex-info on finding a cyclic import"
   [import]
   (throw-data
-    "Cyclic import"
+    "Import error: cyclic import detected"
     {:type ::cyclic-import
      :import import}))
 
@@ -93,7 +94,7 @@
   "Throws an ex-info on hash protection mismatch"
   [import actual-hash expression]
   (throw-data
-    "Hash mismatch"
+    "Import error: hash mismatch"
     {:type ::hash-mismatch
      :import import
      :actual-hash actual-hash

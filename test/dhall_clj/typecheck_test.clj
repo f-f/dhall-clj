@@ -43,7 +43,7 @@
    ["dhall-lang" "tests" "typecheck" "failure" "hurkensParadox.dhall"]
    ["dhall-lang" "tests" "typecheck" "success" "recordOfTypes"]
    ["dhall-lang" "tests" "typecheck" "success" "accessEncodedType"]
-   ["dhall-lang" "tests" "typecheck" "success" "encodedRecordOfTypes"]
+   ["dhall-lang" "tests" "typecheck" "success" "recordOfRecordOfTypes"]
    ["dhall-lang" "tests" "typecheck" "success" "accessType"]
    ["dhall-lang" "tests" "typecheck" "success" "simple" "kindParameter"]
    ["dhall-lang" "tests" "typecheck" "success" "simple" "fieldsAreTypes"]])

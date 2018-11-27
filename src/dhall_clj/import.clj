@@ -3,7 +3,9 @@
             [medley.core :refer [map-vals]]
             [digest :refer [sha-256]]
             [me.raynes.fs :as fs]
+            [qbits.ex :as ex]
             [clojure.java.io :as io]
+            [clojure.data.finger-tree :refer [double-list conjl]]
             [clojure.string :as str]
             [dhall-clj.parse :refer [parse expr]]
             [dhall-clj.fail :as fail]
@@ -120,6 +122,7 @@
     if some import cannot be resolved."))
 
 (extend-protocol IResolve
+
   Import
   (resolve-imports [{:keys [hash? mode data] :as this} state]
     (let [data (-> data
@@ -154,8 +157,38 @@
                 (fail/hash-mismatch! this actual-hash normalized))))))))
 
   dhall_clj.ast.ImportAlt
-  (resolve-imports [this state]
-    this) ;; TODO
+  (resolve-imports [{:keys [a b]} state]
+    (ex/try+
+      (resolve-imports a state)
+      (catch-data :dhall-clj.fail/imports {:as data-a}
+        (ex/try+
+          (resolve-imports b state)
+          (catch-data :dhall-clj.fail/imports {:as data-b}
+            (let [typ-a (:type data-a)
+                  typ-b (:type data-b)
+                  imported (:stack state)]
+              (cond
+                (and (= typ-a :dhall-clj.fail/missing-imports)
+                     (= typ-b :dhall-clj.fail/missing-imports))
+                (fail/missing-imports!
+                  (concat (:errors data-a) (:errors data-b))
+                  imported)
+
+                (= typ-a :dhall-clj.fail/missing-imports)
+                (fail/missing-imports!
+                  (conj (:errors data-a) data-b)
+                  imported)
+
+                (= typ-b :dhall-clj.fail/missing-imports)
+                (fail/missing-imports!
+                  (conjl (:errors data-b) data-a)
+                  imported)
+
+                :else
+                (fail/missing-imports!
+                  (double-list data-a data-b)
+                  imported))))))))
+
 
   dhall_clj.ast.Const
   (resolve-imports [this state] this)
