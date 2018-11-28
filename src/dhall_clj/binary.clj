@@ -196,12 +196,15 @@
                        (recur (conj res (decbor e) s) more))
                      res))))
           ;; TODO imports
-          25 (if (= 4 (count e))
-               (let [[label body next] (rest e)]
-                 (->Let label nil (decbor body) (decbor next)))
-               (let [[label typ body next] (rest e)]
-                 (assert-len! e 5)
-                 (->Let label (decbor typ) (decbor body) (decbor next))))
+          25 (->Let
+               (mapv
+                 (fn [[label type? body]]
+                   (->Binding
+                     label
+                     (when-not (nil? type?) (decbor type?))
+                     (decbor body)))
+                 (partition 3 (butlast (rest e))))
+               (decbor (last e)))
           26 (let [[val typ] (rest e)]
                (assert-len! e 3)
                (->Annot (decbor val) (decbor typ))))))))
@@ -259,10 +262,13 @@
     (into [] (concat [0] (map cbor (unapply this)))))
 
   dhall_clj.ast.Let
-  (cbor [{:keys [label type? body next]}]
-    (if type?
-      [25 label (cbor type?) (cbor body) (cbor next)]
-      [25 label              (cbor body) (cbor next)]))
+  (cbor [{:keys [bindings next]}]
+    (letfn [(make-binding [{:keys [label type? e]}]
+              [label
+               (when type?
+                 (cbor type?))
+               (cbor e)])]
+      (into [] (concat [25] (mapcat make-binding bindings) [(cbor next)]))))
 
   dhall_clj.ast.Annot
   (cbor [{:keys [val type]}]

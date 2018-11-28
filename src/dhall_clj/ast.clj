@@ -21,25 +21,14 @@
 
 
 ;; All classes that form the expression tree follow
-;;
-;;   Implementation note: the classes here are basically the constructors
-;;   of the Expr type that the Haskell implementation has in Dhall.Core
-;;
-;;   However, two constructors are missing here:
-;;
-;;   - `Note`: this is used there for keeping track of the source position.
-;;     Here we use the metadata on nodes for that.
-;;
-;;   - `Embed`: it's there to make extending the type nice there, while
-;;     keeping type safety. Here we just hope we have enough tests :)
-
 
 (defrecord Const [c])
 (defrecord Var [x i])
 (defrecord Lam [arg type body])
 (defrecord Pi [arg type body])
 (defrecord App [a b])
-(defrecord Let [label type? body next])
+(defrecord Binding [label type? e]) ;; This is only ever contained only in Let
+(defrecord Let [bindings next])
 (defrecord Annot [val type])
 (defrecord BoolT [])
 (defrecord BoolLit [b])
@@ -161,14 +150,21 @@
        (update :b shift diff var)))
 
   Let
-  (shift [{:keys [label type?] :as this} diff {:keys [x i] :as var}]
-    (let [i' (if (= x label)
+  (shift [{:keys [bindings next] :as this} diff {:keys [x i] :as var}]
+    (let [[{:keys [label type?] :as binding} & more-bindings] bindings
+          i' (if (= x label)
                (inc i)
-               i)]
-      (-> this
-         (assoc  :type? (when type? (shift type? diff var)))
-         (update :body shift diff var)
-         (update :next shift diff (assoc var :i i')))))
+               i)
+          type?' (when type? (shift type? diff var))
+          binding' (-> binding
+                      (assoc :type? type?')
+                      (update :e shift diff var))]
+      (if-not (seq more-bindings)
+        (-> this
+           (assoc :bindings (list binding'))
+           (update :next shift diff (assoc var :i i')))
+        (let [new (shift (update this :bindings rest) diff var)]
+          (update new :bindings conj binding')))))
 
   Annot
   (shift [this diff var]
@@ -457,15 +453,22 @@
        (update :b subst var e)))
 
   Let
-  (subst [{:keys [label type?] :as this} {:keys [x i] :as var} e]
-    (let [y  label
+  (subst [{:keys [bindings next] :as this} {:keys [x i] :as var} e]
+    (let [[{:keys [label type?] :as binding} & more-bindings] bindings
+          y  label
           i' (if (= x y)
                (inc i)
-               i)]
-      (-> this
-         (assoc  :type? (when type? (subst type? var e)))
-         (update :body subst var e)
-         (update :next subst (->Var x i') (shift e 1 (->Var y 0))))))
+               i)
+          type?' (when type? (subst type? var e))
+          binding' (-> binding
+                      (assoc :type? type?')
+                      (update :e subst var e))]
+      (if-not (seq more-bindings)
+        (-> this
+           (assoc :bindings (list binding'))
+           (update :next subst (->Var x i') (shift e 1 (->Var y 0))))
+        (let [new (subst (update this :bindings rest) var e)]
+          (update new :bindings conj binding')))))
 
   Annot
   (subst [this var e]

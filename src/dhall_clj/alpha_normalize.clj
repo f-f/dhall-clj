@@ -56,8 +56,9 @@
        (update :b alpha-normalize)))
 
   dhall_clj.ast.Let
-  (alpha-normalize [{:keys [label type? body next] :as this}]
-    (let [var   (->Var label 0)
+  (alpha-normalize [{:keys [bindings next] :as this}]
+    (let [[{:keys [label type? e] :as binding} & more-bindings] bindings
+          var   (->Var label 0)
           v'    (->Var "_" 0)
           next' (if (= label "_")
                   (alpha-normalize next)
@@ -65,12 +66,23 @@
                      (shift 1 v')
                      (subst var v')
                      (shift -1 var)
-                     (alpha-normalize)))]
-      (assoc this
-             :label "_"
-             :type? (when type? (alpha-normalize type?))
-             :body  (alpha-normalize body)
-             :next  next')))
+                     (alpha-normalize)))
+          type?'   (when type? (alpha-normalize type?))
+          binding' (assoc
+                     binding
+                     :label "_"
+                     :type? type?'
+                     :e (alpha-normalize e))]
+      (if-not (seq more-bindings)
+        (assoc
+          this
+          :bindings (list binding')
+          :next next')
+        (-> this
+           (update :bindings rest)
+           (assoc :next next')
+           (alpha-normalize)
+           (update :bindings conj binding')))))
 
   dhall_clj.ast.Annot
   (alpha-normalize [this]

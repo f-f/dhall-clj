@@ -153,10 +153,14 @@
              (->BoolT))]
 
    ["let x : t = e1 in e2"
-    (->Let "x" (->Var "t" 0) (->Var "e1" 0) (->Var "e2" 0))]
+    (->Let
+      [(->Binding "x" (->Var "t" 0) (->Var "e1" 0))]
+      (->Var "e2" 0))]
 
    ["let x = e1 in e2"
-    (->Let "x" nil (->Var "e1" 0) (->Var "e2" 0))]
+    (->Let
+      [(->Binding "x" nil (->Var "e1" 0))]
+      (->Var "e2" 0))]
 
    ["forall (x : a) -> b"
     (->Pi "x" (->Var "a" 0) (->Var "b" 0))]
@@ -325,19 +329,12 @@
    ["dhall-lang" "tests" "parser" "success" "urls"]
    ["dhall-lang" "tests" "parser" "success" "environmentVariables"]
    ["dhall-lang" "tests" "parser" "success" "pathTermination"]
+   ["dhall-lang" "tests" "parser" "success" "importAlt"]
    ;; Broken operators?
    ["dhall-lang" "tests" "parser" "success" "operators"]
    ;; Something's broken
    ["dhall-lang" "tests" "parser" "success" "largeExpression"]
 
-   ;; Waiting on issue #12
-   ["dhall-lang" "tests" "parser" "success" "importAlt"]
-   ;; Waiting on issue #27
-   ["dhall-lang" "tests" "parser" "success" "multilet"]
-   ["dhall-lang" "tests" "parser" "success" "reservedPrefix"]
-   ["dhall-lang" "tests" "parser" "success" "let"]
-   ["dhall-lang" "tests" "parser" "success" "label"]
-   ["dhall-lang" "tests" "parser" "success" "quotedLabel"]
    ;; Waiting on issue #28
    ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])
 

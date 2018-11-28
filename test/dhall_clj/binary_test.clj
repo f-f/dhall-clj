@@ -60,7 +60,14 @@
 
 (defn lam          [a b] (gen/fmap (partial apply ->Lam) (gen/tuple label a b)))
 (defn pi           [a b] (gen/fmap (partial apply ->Pi) (gen/tuple label a b)))
-(defn let'         [a b] (gen/fmap (partial apply ->Let) (gen/tuple label (maybe a) a b)))
+(defn let'         [a b] (gen/fmap
+                           (partial apply ->Let)
+                           (gen/tuple
+                             (gen/not-empty
+                               (gen/resize 5 (gen/vector (gen/fmap
+                                                           (partial apply ->Binding)
+                                                           (gen/tuple label (maybe a) a)))))
+                             b)))
 (defn bool-if      [a b] (gen/fmap (partial apply ->BoolIf) (gen/tuple a a b)))
 (defn text         [a b] (gen/fmap
                            ->TextLit

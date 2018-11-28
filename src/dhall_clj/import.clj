@@ -215,11 +215,17 @@
        (update :b resolve-imports state)))
 
   dhall_clj.ast.Let
-  (resolve-imports [{:keys [type?] :as this} state]
-    (-> this
-       (assoc  :type? (when type? (resolve-imports type? state)))
-       (update :body  resolve-imports state)
-       (update :next  resolve-imports state)))
+  (resolve-imports [{:keys [bindings next] :as this} state]
+    (assoc
+      this
+      :bindings (mapv
+                  (fn [{:keys [type? e] :as binding}]
+                    (assoc
+                      binding
+                      :type? (when type? (resolve-imports type? state))
+                      :e (resolve-imports e state)))
+                  bindings)
+      :next (resolve-imports next state)))
 
   dhall_clj.ast.Annot
   (resolve-imports [this state]

@@ -37,11 +37,7 @@
   Note: they are vectors because the path creation is platform-sensitive."
   [
    ;; Duplicate fields should fail to typecheck
-   ["dhall-lang" "tests" "typecheck" "failure" "duplicateFields.dhall"]
-
-   ;; Waiting on issue #27
-   ["dhall-lang" "tests" "typecheck" "failure" "hurkensParadox.dhall"]
-   ["dhall-lang" "tests" "typecheck" "success" "recordOfRecordOfTypes"]])
+   ["dhall-lang" "tests" "typecheck" "failure" "duplicateFields.dhall"]])
 
 
 (defn valid-testcases []

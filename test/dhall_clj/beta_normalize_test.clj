@@ -61,8 +61,6 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Waiting on issue #27
-   ["dhall-lang" "tests" "normalization" "success" "simple" "letlet"]
    ;; Waiting for single quote strings to be standardized
    ["dhall-lang" "tests" "normalization" "success" "remoteSystems"]])
 

@@ -134,8 +134,9 @@
              (shift -1 v))))))
 
   dhall_clj.ast.Let
-  (typecheck [{:keys [label type? body next] :as this} ctx]
-    (let [bodyT (typecheck body ctx)
+  (typecheck [{:keys [bindings next] :as this} ctx]
+    (let [[{:keys [label type? e] :as binding} & more-bindings] bindings
+          bodyT (typecheck e ctx)
           ;; FIXME normalize in the else branch also in the haskell implementation
           _ (when type?
               (typecheck type? ctx)
@@ -143,25 +144,28 @@
                 (fail/annot-mismatch!
                   ctx
                   this
-                  {:val   body
+                  {:val   e
                    :type  (beta-normalize bodyT)
                    :annot (beta-normalize type?)})))
           bodyK (typecheck bodyT ctx)
           v (->Var label 0)
-          body' (-> body
+          body' (-> e
                    (beta-normalize)
-                   (shift 1 v))]
+                   (shift 1 v))
+          more-let (if (seq more-bindings)
+                     (assoc this :bindings more-bindings)
+                     next)]
       ;; If the body's type is Type, we can take a fast path
       ;; and typecheck only at context-insertion-time
       (if (= (->Const :type) (beta-normalize bodyK))
         (let [ctx' (-> (beta-normalize bodyT)
                       (context/insert label ctx)
                       (context/transform (fn [e] (shift e 1 v))))]
-          (-> next
+          (-> more-let
              (typecheck ctx')
              (subst v body')
              (shift -1 v)))
-        (-> next
+        (-> more-let
            (subst v body')
            (shift -1 v)
            (typecheck ctx)))))

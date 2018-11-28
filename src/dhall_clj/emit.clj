@@ -35,8 +35,13 @@
     `(~(emit a) ~(emit b)))
 
   dhall_clj.ast.Let
-  (emit [{:keys [label type? body next]}]
-    `(let [~(symbol label) ~(emit body)]
+  (emit [{:keys [bindings next]}]
+    `(let (into
+            []
+            (mapcat
+              (fn [{:keys [label type? e]}]
+                [(symbol label) (emit body)])
+              bindings))
        ~(emit next)))
 
   dhall_clj.ast.Annot

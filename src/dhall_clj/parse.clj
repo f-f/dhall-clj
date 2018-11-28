@@ -257,15 +257,24 @@
       :if     (->BoolIf (expr (nth c 1))
                         (expr (nth c 3))
                         (expr (nth c 5)))
-      :let    (if (> (count c) 6)
-                (->Let (expr (nth c 1))
-                       (expr (nth c 3))
-                       (expr (nth c 5))
-                       (expr (nth c 7)))
-                (->Let (expr (nth c 1))
-                       nil
-                       (expr (nth c 3))
-                       (expr (nth c 5))))
+      :let    (loop [left c
+                     bindings []]
+                (if (= (count left) 2)
+                  (->Let bindings (expr (second left)))
+                  (if-let [type? (when (= :colon (:t (nth left 2)))
+                                   (expr (nth left 3)))]
+                    (recur
+                      (nthrest left 6)
+                      (conj bindings (->Binding
+                                       (expr (nth left 1))
+                                       type?
+                                       (expr (nth left 5)))))
+                    (recur
+                      (nthrest left 4)
+                      (conj bindings (->Binding
+                                       (expr (nth left 1))
+                                       nil
+                                       (expr (nth left 3))))))))
       :forall (->Pi (expr (nth c 2))
                     (expr (nth c 4))
                     (expr (nth c 7)))

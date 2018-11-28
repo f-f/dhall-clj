@@ -35,10 +35,14 @@
            (->Var "x" 0))
     (->Pi "x" (->Const :type) (->Var "x" 0))]
    ;; ↑(1, x, 0, let x = 1 in x) = let x = 1 in x
-   [(shift (->Let "x" nil (->NaturalLit 1) (->Var "x" 0))
+   [(shift (->Let
+             [(->Binding "x" nil (->NaturalLit 1))]
+             (->Var "x" 0))
            1
            (->Var "x" 0))
-    (->Let "x" nil (->NaturalLit 1) (->Var "x" 0))]
+    (->Let
+      [(->Binding "x" nil (->NaturalLit 1))]
+      (->Var "x" 0))]
    ;; ↑(1, x, 0, λ(y : Type) → x) = λ(y : Type) → x@1
    [(shift (->Lam "y" (->Const :type) (->Var "x" 0))
            1
@@ -50,10 +54,14 @@
            (->Var "x" 0))
     (->Pi "y" (->Const :type) (->Var "x" 1))]
    ;; ↑(1, x, 0, let y = 1 in x) = let y = 1 in x@1
-   [(shift (->Let "y" nil (->NaturalLit 1) (->Var "x" 0))
+   [(shift (->Let
+             [(->Binding "y" nil (->NaturalLit 1))]
+             (->Var "x" 0))
            1
            (->Var "x" 0))
-    (->Let "y" nil (->NaturalLit 1) (->Var "x" 1))]
+    (->Let
+      [(->Binding "y" nil (->NaturalLit 1))]
+      (->Var "x" 1))]
    ;; ↑(1, x, 0, List x) = List x@1
    [(shift (->ListLit (->Var "x" 0) [])
            1

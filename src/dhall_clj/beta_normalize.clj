@@ -269,13 +269,18 @@
             :else (->App f' a'))))))
 
   dhall_clj.ast.Let
-  (beta-normalize [{:keys [label body next]}]
-    (let [var   (->Var label 0)
-          body' (shift body 1 var)]
+  (beta-normalize [{:keys [bindings next] :as this}]
+    (let [[{:keys [label type? e] :as binding} & more-bindings] bindings
+          var (->Var label 0)
+          e'  (shift e 1 var)
+          more-let (if (seq more-bindings)
+                     (assoc this :bindings more-bindings)
+                     next)]
       (beta-normalize
-        (-> next
-           (subst var body')
+        (-> more-let
+           (subst var e')
            (shift -1 var)))))
+
 
   dhall_clj.ast.Annot
   (beta-normalize [this]
