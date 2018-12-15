@@ -312,17 +312,12 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Waiting on broken single quotes strings
-   ["dhall-lang" "tests" "parser" "success" "interpolatedSingleQuotedString"]
-   ["dhall-lang" "tests" "parser" "success" "escapedSingleQuotedString"]
-   ["dhall-lang" "tests" "parser" "success" "singleQuotedString"]
-   ["dhall-lang" "tests" "parser" "success" "template"]
    ;; Broken annotations?
    ["dhall-lang" "tests" "parser" "success" "annotations"]
    ["dhall-lang" "tests" "parser" "success" "list"]
    ;; "Failed to build the AST from the parse-tree; unmatched rule `null`"
    ["dhall-lang" "tests" "parser" "success" "escapedDoubleQuotedString"]
-   ;; No CBOR for imports?
+   ;; No CBOR for imports yet
    ["dhall-lang" "tests" "parser" "success" "collectionImportType"]
    ["dhall-lang" "tests" "parser" "success" "parenthesizeUsing"]
    ["dhall-lang" "tests" "parser" "success" "paths"]
@@ -335,6 +330,11 @@
    ;; Something's broken
    ["dhall-lang" "tests" "parser" "success" "largeExpression"]
 
+   ;; Waiting on issue #31
+   ["dhall-lang" "tests" "parser" "success" "interpolatedSingleQuotedString"]
+   ["dhall-lang" "tests" "parser" "success" "escapedSingleQuotedString"]
+   ["dhall-lang" "tests" "parser" "success" "singleQuotedString"]
+   ["dhall-lang" "tests" "parser" "success" "template"]
    ;; Waiting on issue #28
    ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])
 
