@@ -4,7 +4,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :scm {:name "git" :url "https://github.com/f-f/dhall-clj"}
-  :dependencies [[org.clojure/clojure "1.10.0-beta5"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/spec.alpha "0.2.176"]
                  [org.clojure/tools.reader "1.3.2"]
                  [org.clojure/core.match "0.3.0-alpha5"]
