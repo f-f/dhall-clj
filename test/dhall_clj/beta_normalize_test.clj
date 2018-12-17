@@ -61,7 +61,18 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Waiting for #31
+   ;; Waiting for #26
+   ["dhall-lang" "tests" "normalization" "success" "simple" "integerToDouble"]
+   ;; Waiting for #31 - they don't even terminate
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "singleLine"]
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "interpolation"]
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "escape"]
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "hangingIndent"]
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "interesting"]
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "interiorIndent"]
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "preserveComment"]
+   ["dhall-lang" "tests" "normalization" "success" "multiline" "twoLines"]
+   ["dhall-lang" "tests" "normalization" "success" "simple" "multiLine"]
    ["dhall-lang" "tests" "normalization" "success" "remoteSystems"]])
 
 

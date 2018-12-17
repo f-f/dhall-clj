@@ -8,6 +8,7 @@
              [dhall-clj.beta-normalize :refer [beta-normalize]]
              [dhall-clj.state :as s]
              [dhall-clj.test-utils :refer :all]
+             [clojure.java.io :as io]
              [me.raynes.fs :as fs]))
 
 
@@ -24,8 +25,18 @@
 (def problematic
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
-  [])
+  [
+   ;; Waiting on issue #26
+   ["dhall-lang" "tests" "import" "success" "asText"]
+   ;; Waiting for proper cycle detection
+   ["dhall-lang" "tests" "import" "failure" "cycle.dhall"]])
 
+
+(defn valid-testcases []
+  (let [all (success-testcases (str test-folder "/success"))]
+    (->> problematic
+       (map #(->> % (apply io/file) str))
+       (apply dissoc all))))
 
 (deftest import-success-suite
   (let [import-cache (s/new)
@@ -39,10 +50,16 @@
                  (resolve-imports import-cache)
                  (beta-normalize))))]
     (doseq [[testcase {:keys [actual expected]}] (merge simple-success-cases
-                                                        (success-testcases test-folder))]
+                                                        (valid-testcases))]
       (println "TESTCASE:" testcase)
       (testing actual
         (is (= (f actual) (f expected)))))))
+
+(defn valid-failing-testcases []
+  (let [all (failure-testcases test-folder)]
+    (->> problematic
+       (map #(->> % (apply io/file) str))
+       (apply dissoc all))))
 
 (deftest import-failure-suite
   (let [import-cache (s/new)
@@ -55,8 +72,8 @@
                  expr
                  (resolve-imports import-cache))))]
     (doseq [[testcase dhall] (merge simple-failure-cases
-                                    (failure-testcases test-folder))]
+                                    (valid-failing-testcases))]
       (println "TESTCASE failure:" testcase)
       (testing testcase
-        (is (thrown-with-msg? clojure.lang.ExceptionInfo (re-pattern "Import error:")
+        (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Import error:"
                               (f dhall)))))))

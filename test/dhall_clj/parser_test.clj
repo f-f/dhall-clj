@@ -45,14 +45,15 @@
    ["\"abab ${1} cd\""
     (->TextLit ["abab " (->NaturalLit 1) " cd"])]
 
-   ["''abcd''"
-    (->TextLit ["abcd"])]
+   ;; Waiting on issue #31
+   ;;["''abcd''"
+   ;; (->TextLit ["abcd"])]
 
-   ["''a${1}b''"
-    (->TextLit ["a" (->NaturalLit 1) "b"])]
+   ;;["''a${1}b''"
+   ;; (->TextLit ["a" (->NaturalLit 1) "b"])]
 
-   ["''${Bool}${Natural}''"
-    (->TextLit ["" (->BoolT) "" (->NaturalT) ""])]
+   ;;["''${Bool}${Natural}''"
+   ;; (->TextLit ["" (->BoolT) "" (->NaturalT) ""])]
 
    ["[1]"
     (->ListLit nil [(->NaturalLit 1)])]
@@ -325,6 +326,7 @@
    ["dhall-lang" "tests" "parser" "success" "environmentVariables"]
    ["dhall-lang" "tests" "parser" "success" "pathTermination"]
    ["dhall-lang" "tests" "parser" "success" "importAlt"]
+   ["dhall-lang" "tests" "parser" "success" "asText"]
    ;; Broken operators?
    ["dhall-lang" "tests" "parser" "success" "operators"]
    ;; Something's broken
@@ -335,6 +337,10 @@
    ["dhall-lang" "tests" "parser" "success" "escapedSingleQuotedString"]
    ["dhall-lang" "tests" "parser" "success" "singleQuotedString"]
    ["dhall-lang" "tests" "parser" "success" "template"]
+   ;; Waiting on issue #26
+   ["dhall-lang" "tests" "parser" "success" "double"]
+   ["dhall-lang" "tests" "parser" "failure" "doubleBoundsNeg.dhall"]
+   ["dhall-lang" "tests" "parser" "failure" "doubleBoundsPos.dhall"]
    ;; Waiting on issue #28
    ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])
 
@@ -352,8 +358,15 @@
       (is (= (-> actual parse expr binary/cbor)
              (-> expected json/parse-string))))))
 
+
+(defn valid-failing-testcases []
+  (let [all (failure-testcases test-folder)]
+    (->> problematic
+       (map #(->> % (apply io/file) str))
+       (apply dissoc all))))
+
 (deftest parser-failure-suite
-  (doseq [[testcase dhall] (failure-testcases test-folder)]
+  (doseq [[testcase dhall] (valid-failing-testcases)]
     (println "TESTCASE" testcase)
     (testing testcase
       (is (thrown-with-msg? clojure.lang.ExceptionInfo #"Parse error:"
