@@ -346,7 +346,7 @@
 
 
 (defn valid-testcases []
-  (let [all (success-testcases test-folder)]
+  (let [all (success-testcases (str test-folder "/success"))]
     (->> problematic
        (map #(->> % (apply io/file) str))
        (apply dissoc all))))
@@ -360,7 +360,7 @@
 
 
 (defn valid-failing-testcases []
-  (let [all (failure-testcases test-folder)]
+  (let [all (failure-testcases (str test-folder "/failure"))]
     (->> problematic
        (map #(->> % (apply io/file) str))
        (apply dissoc all))))
