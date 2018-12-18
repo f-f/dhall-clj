@@ -27,9 +27,11 @@
                  (remove failure-case?))
         map-of-testcases (group-by #(->> % str (drop-last 7) (apply str)) files)]
     (map-vals
-      (fn [[actual expected]]
-        {:actual   (slurp actual)
-         :expected (slurp expected)})
+      (fn [a-and-b]
+        ;; We sort so we get the A.dhall file first
+        (let [[actual expected] (sort a-and-b)]
+          {:actual   (slurp actual)
+           :expected (slurp expected)}))
       map-of-testcases)))
 
 (defn failure-testcases
