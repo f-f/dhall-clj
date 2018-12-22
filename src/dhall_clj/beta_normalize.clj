@@ -454,23 +454,7 @@
 
   dhall_clj.ast.TextAppend
   (beta-normalize [{:keys [a b]}]
-    (let [compact (fn [chunks]
-                    (loop [cs  chunks
-                           acc nil
-                           new []]
-                      (if (seq cs)
-                        (let [c (first cs)]
-                          (if (string? c)
-                            (recur (rest cs)
-                                   (str acc c)
-                                   new)
-                            (recur (rest cs)
-                                   nil
-                                   (conj new (or acc "") c))))
-                        (if-not acc
-                          new
-                          (conj new acc)))))
-          empty-text? (fn [t]
+    (let [empty-text? (fn [t]
                         (and (instance? TextLit t)
                              (every? #(and (string? %) (empty? %))
                                      (:chunks t))))
@@ -480,7 +464,7 @@
                      (empty-text? r)             l
                      (and (instance? TextLit l)
                           (instance? TextLit r)) (->TextLit
-                                                   (compact
+                                                   (compact-chunks
                                                      (concat (:chunks l) (:chunks r))))
                      :else                       (->TextAppend l r)))]
       (decide (beta-normalize a) (beta-normalize b))))

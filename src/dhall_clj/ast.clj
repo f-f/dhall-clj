@@ -95,6 +95,22 @@
   (update this :chunks #(map (fn [el] (if (string? el) el (f el))) %)))
 
 
+(defn compact-chunks [chunks]
+  (loop [cs  chunks
+         acc nil
+         new []]
+    (if (seq cs)
+      (let [c (first cs)]
+        (if (string? c)
+          (recur (rest cs)
+                 (str acc c)
+                 new)
+          (recur (rest cs)
+                 nil
+                 (conj new (or acc "") c))))
+      (if-not acc
+        new
+        (conj new acc)))))
 
 ;; Shift
 

@@ -564,6 +564,31 @@
   (let [vals (->> e :c rest (take-nth 2) (mapv expr))]
     (->ListLit nil vals)))
 
+
+(defn multiline->text-lit [lines]
+  (let [min-indent (apply
+                     min
+                     (mapv
+                       (fn [[first-el & others]]
+                         (if (string? first-el)
+                           (count (take-while #(= % \space) first-el))
+                           0))
+                       lines))
+        strip-indent (fn [line]
+                       (if (and (> min-indent 0) (string? (first line)))
+                         (update line 0 #(subs % min-indent))
+                         line))]
+    (->> lines
+       (mapcat strip-indent)
+       (compact-chunks)
+       (into []))))
+
+
+;; From https://groups.google.com/forum/#!topic/clojure/JrnYQp84Dig
+(defn hex->num [#^String s]
+  (Integer/parseInt (.substring s 2) 16))
+
+
 (defmethod expr :text-literal [e]
   (let [first-tag (-> e :c first :t)
         children (:c e)]
@@ -578,32 +603,86 @@
           (if (seq children)
             (let [chunk (first children)
                   content (:c chunk)]
-              (if (every? string? content)  ;; If they are not strings, it's an interpolation
-                (recur (rest children)
-                       (str acc (apply str content))
-                       chunks)
+              (condp = (first content)
+                "${" ;; If we match the interpolation, empty the accumulator and concat it
                 (recur (rest children)
                        ""
-                       (conj chunks acc (expr (nth content 1))))))
+                       (conj chunks acc (expr (nth content 1))))
+
+                "\\" ;; Or we might match the escape slash, so we emit some special chars
+                (let [new-char (condp = (second content)
+                                 "\"" "\""
+                                 "$"  "$"
+                                 "\\" "\\"
+                                 "/"  "/"
+                                 "b"  "\b"
+                                 "f"  "\f"
+                                 "n"  "\n"
+                                 "r"  "\r"
+                                 "t"  "\t"
+                                 ;; Otherwise we're reading in a \uXXXX char
+                                 (->> (nthrest content 2)
+                                    (mapv (fn [{:keys [c]}]
+                                            (-> c first :c first)))
+                                    (apply str "0x")
+                                    hex->num
+                                    char))]
+                  (recur (rest children)
+                         (str acc new-char)
+                         chunks))
+
+                ;; Otherwise we just attach to the accumulator, since it's a normal char
+                (recur (rest children)
+                       (str acc (first content))
+                       chunks)))
             ;; If we have no children left to process,
             ;; we return the chunks we have, plus the accomulator
             (conj chunks acc)))
         ;; Otherwise it's a single quote literal,
         ;; so we recur over the children until we find an ending literal.
         ;; As above, we make expressions out of interpolation syntax
-        (loop [children (-> children first :c second :c)
+        (loop [children (-> children first :c (nth 2) :c)
                acc ""
-               chunks []]
+               line-chunks []
+               lines []]
           (if (= children ["''"])
-            (conj chunks acc)
-            (if (not= (first children) "${")  ;; Check if interpolation
-              ;; If not we just add the string and recur
-              (recur (-> children second :c)
-                     (str acc (first children))
-                     chunks)
+            (multiline->text-lit (conj lines (conj line-chunks acc)))
+            (condp = (first children)
+              "${" ;; Interpolation check - reset accumulator, concat to chunks
               (recur (-> children (nth 3) :c)
                      ""
-                     (conj chunks acc (expr (second children)))))))))))
+                     (conj line-chunks acc (expr (second children)))
+                     lines)
+
+              "''${" ;; Escaping the interpolation symbols
+              (recur (-> children second :c)
+                     (str acc "${")
+                     line-chunks
+                     lines)
+
+              "'''" ;; Escaping the single quotes
+              (recur (-> children second :c)
+                     (str acc "''")
+                     line-chunks
+                     lines)
+
+              {:c '("\n") :t :end-of-line} ;; newline, reset acc and line-chunks
+              (recur (-> children second :c)
+                     ""
+                     []
+                     (conj lines (conj line-chunks (str acc "\n"))))
+
+              {:c '("\t") :t :tab} ;; tab char, we leave it alone
+              (recur (-> children second :c)
+                     (str acc "\t")
+                     line-chunks
+                     lines)
+
+              ;; Otherwise we just add the string to the accumulator and recur
+              (recur (-> children second :c)
+                     (str acc (first children))
+                     line-chunks
+                     lines))))))))
 
 ;; Default case, we end up here when there is no matches
 (defmethod expr :default [e]

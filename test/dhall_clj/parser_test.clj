@@ -40,20 +40,19 @@
     (->TextLit [""])]
 
    ["\"\\\"aaaa\""
-    (->TextLit ["\\\"aaaa"])]
+    (->TextLit ["\"aaaa"])]
 
    ["\"abab ${1} cd\""
     (->TextLit ["abab " (->NaturalLit 1) " cd"])]
 
-   ;; Waiting on issue #31
-   ;;["''abcd''"
-   ;; (->TextLit ["abcd"])]
+   ["''\nabcd''"
+    (->TextLit ["abcd"])]
 
-   ;;["''a${1}b''"
-   ;; (->TextLit ["a" (->NaturalLit 1) "b"])]
+   ["''\na${1}b''"
+    (->TextLit ["a" (->NaturalLit 1) "b"])]
 
-   ;;["''${Bool}${Natural}''"
-   ;; (->TextLit ["" (->BoolT) "" (->NaturalT) ""])]
+   ["''\n${Bool}${Natural}''"
+    (->TextLit ["" (->BoolT) "" (->NaturalT) ""])]
 
    ["[1]"
     (->ListLit nil [(->NaturalLit 1)])]
@@ -316,8 +315,6 @@
    ;; Broken annotations?
    ["dhall-lang" "tests" "parser" "success" "annotations"]
    ["dhall-lang" "tests" "parser" "success" "list"]
-   ;; "Failed to build the AST from the parse-tree; unmatched rule `null`"
-   ["dhall-lang" "tests" "parser" "success" "escapedDoubleQuotedString"]
    ;; No CBOR for imports yet
    ["dhall-lang" "tests" "parser" "success" "collectionImportType"]
    ["dhall-lang" "tests" "parser" "success" "parenthesizeUsing"]
@@ -332,11 +329,6 @@
    ;; Something's broken
    ["dhall-lang" "tests" "parser" "success" "largeExpression"]
 
-   ;; Waiting on issue #31
-   ["dhall-lang" "tests" "parser" "success" "interpolatedSingleQuotedString"]
-   ["dhall-lang" "tests" "parser" "success" "escapedSingleQuotedString"]
-   ["dhall-lang" "tests" "parser" "success" "singleQuotedString"]
-   ["dhall-lang" "tests" "parser" "success" "template"]
    ;; Waiting on issue #26
    ["dhall-lang" "tests" "parser" "success" "double"]
    ["dhall-lang" "tests" "parser" "failure" "doubleBoundsNeg.dhall"]
