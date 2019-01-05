@@ -102,16 +102,80 @@
 ;; Resolving imports
 ;;
 
+
+(defn assert-dir
+  "Ensure that `directory` exists and it's readable and writable"
+  [directory]
+  (if (and (fs/exists? directory)
+           (fs/directory? directory))
+    (assert (and (fs/readable? directory)
+                 (fs/writeable? directory))
+            "Directory should be readable and writeable")
+    (do
+      (assert-dir (fs/parent directory))
+      (fs/mkdir directory)
+      (fs/chmod "+rw" directory))))
+
+(defn get-cached-file
+  "Given a hash, returns the filename after making sure it's writable and stuff"
+  [hash]
+  (let [cache-dir (or (some-> (System/getenv "XDG_CACHE_HOME") io/file)
+                      (io/file (fs/home) ".cache"))
+        _ (assert-dir cache-dir)
+        dhall-dir (io/file cache-dir "dhall")
+        _ (assert-dir dhall-dir)]
+    (io/file dhall-dir hash)))
+
+
+;; From https://stackoverflow.com/questions/23018870
+(defn slurp-bytes
+  "Slurp the bytes from a slurpable thing"
+  [x]
+  (with-open [out (java.io.ByteArrayOutputStream.)]
+    (clojure.java.io/copy (clojure.java.io/input-stream x) out)
+    (.toByteArray out)))
+
+(defn spit-bytes
+  "Spit bytes to a file"
+  [f content]
+  (with-open [out (io/output-stream (io/file f))]
+    (.write out content)))
+
 (defn expr-from-import
   "Given a Missing, Env, Local or Remote, fetches them
   from the appropriate place, and returns and expression
   (that might contain more imports)."
-  [import-data mode]
-  (let [raw (fetch import-data)]
-    (if (= mode :code)
-      (-> raw parse expr)
-      (->TextLit [raw]))))
+  [import-data mode hash?]
+  ;; Here we try to get the cached expression.
+  ;; If we don't find it, we `fetch` a new one
+  (if-let [cached (some->
+                    hash?
+                    get-cached-file
+                    (#(when (fs/exists? %) %))
+                    slurp-bytes
+                    ((fn [contents]
+                       (let [actual-hash (sha-256 contents)]
+                         (if (= actual-hash hash?)
+                           contents
+                           (fail/hash-mismatch! import-data actual-hash (get-cached-file hash?))))))
+                    binary/decode)]
+    cached
+    (let [raw (fetch import-data)]
+      (if (= mode :code)
+        (-> raw parse expr)
+        (->TextLit [raw])))))
 
+(defn cache-import
+  "Given an Import, verifies that its hash is good, and saves it to cache"
+  [{:keys [hash?] :as import} expression]
+  (when hash?
+    (let [_type (typecheck expression {})
+          normalized (-> expression beta-normalize alpha-normalize)
+          bytes (binary/encode normalized)
+          actual-hash (sha-256 bytes)]
+      (if (= actual-hash hash?)
+        (spit-bytes (get-cached-file actual-hash) bytes)
+        (fail/hash-mismatch! import actual-hash normalized)))))
 
 (defprotocol IResolve
   (resolve-imports [this state]
@@ -137,10 +201,12 @@
               dynamic-expr (s/with-cache!
                              (:cache-raw state)
                              this
-                             (expr-from-import data mode))
+                             (expr-from-import data mode hash?))
               resolved-expr (resolve-imports
                               dynamic-expr
                               (update state :stack conj data))
+              ;; Cache the expression here
+              _ (cache-import this resolved-expr)
               ;; Typecheck with empty context here, as imports cannot
               ;; contain free variables
               _             (typecheck resolved-expr {})
@@ -153,6 +219,7 @@
                                    binary/encode
                                    sha-256)]
               (if (= expected-hash actual-hash)
+                ;; TODO: save to local cache here
                 normalized
                 (fail/hash-mismatch! this actual-hash normalized))))))))
 
