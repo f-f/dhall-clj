@@ -19,7 +19,7 @@
   (emit [{:keys [x i]}]
     (if (zero? i)
       (symbol x)
-      (symbol (str x "-" i))))
+      (symbol (str x "__" i))))
 
   dhall_clj.ast.Lam
   (emit [{:keys [arg type body]}]
@@ -32,15 +32,23 @@
 
   dhall_clj.ast.App
   (emit [{:keys [a b]}]
-    `(~(emit a) ~(emit b)))
+    (let [f (emit a)
+          v (emit b)]
+      ;; Here we have to pay attention about the "magic" things, like
+      ;; `None Natural` or `List a`, and type applications in general
+      (cond
+        ;; None $type
+        (instance? dhall_clj.ast.None a) f
+
+        :else `(~f ~v))))
 
   dhall_clj.ast.Let
   (emit [{:keys [bindings next]}]
-    `(let (into
+    `(let ~(into
             []
             (mapcat
               (fn [{:keys [label type? e]}]
-                [(symbol label) (emit body)])
+                [(symbol label) (emit e)])
               bindings))
        ~(emit next)))
 
@@ -156,15 +164,14 @@
 
   dhall_clj.ast.TextLit
   (emit [{:keys [chunks]}]
-    (if (every? string? chunks)
-      (apply str chunks)
-      `(apply
-         str
-         ~(mapv
-            #(if (string? %)
-               %
-               (emit %))
-           chunks))))
+    (let [chunks' (mapv
+                    #(if (string? %)
+                       %
+                       (emit %))
+                    chunks)]
+      (if (every? string? chunks')
+        (apply str chunks')
+        `(apply str ~chunks'))))
 
   dhall_clj.ast.TextAppend
   (emit [{:keys [a b]}]
@@ -176,7 +183,7 @@
 
   dhall_clj.ast.ListLit
   (emit [{:keys [type? exprs]}]
-    (into '() (mapv emit exprs)))
+    (mapv emit exprs))
 
   dhall_clj.ast.ListAppend
   (emit [{:keys [a b]}]
@@ -216,7 +223,16 @@
 
   dhall_clj.ast.OptionalLit
   (emit [{:keys [type val?]}]
-    (emit val)) ;; FIXME type
+    (when val?
+      (emit val?))) ;; FIXME type
+
+  dhall_clj.ast.Some
+  (emit [{:keys [e]}]
+    (emit e))
+
+  dhall_clj.ast.None
+  (emit [this]
+    nil)
 
   dhall_clj.ast.OptionalFold
   (emit [this]
@@ -240,7 +256,7 @@
 
   dhall_clj.ast.UnionLit
   (emit [{:keys [k v kvs]}]
-    `{k ~(emit v)})
+    `{~k ~(emit v)})
 
   dhall_clj.ast.CombineTypes
   (emit [{:keys [a b]}]
@@ -264,11 +280,11 @@
 
   dhall_clj.ast.Field
   (emit [{:keys [e k]}]
-    `(get ~(emit e) k))
+    `(get ~(emit e) ~k))
 
   dhall_clj.ast.Project
   (emit [{:keys [e ks]}]
-    `(select-keys ~(emit e) ks))
+    `(select-keys ~(emit e) ~ks))
 
   dhall_clj.ast.ImportAlt
   (emit [{:keys [a]}]
