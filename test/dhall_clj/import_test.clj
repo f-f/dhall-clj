@@ -14,7 +14,7 @@
              [me.raynes.fs :as fs]))
 
 
-(def prelude-hash "534e4a9e687ba74bfac71b30fc27aa269c0465087ef79bf483e876781602a454")
+(def prelude-hash "26e13b153cb428366610110d4d8f0c135e22b20179d5478bb16b1b83b3f2ca13")
 
 (def simple-success-cases
   {"Prelude import with hash"
@@ -32,6 +32,8 @@
   [
    ;; Waiting on issue #26
    ["dhall-lang" "tests" "import" "success" "asText"]
+   ;; Waiting on issue #34
+   ["dhall-lang" "tests" "import" "failure" "referentiallyInsane.dhall"]
    ;; Waiting for proper cycle detection
    ["dhall-lang" "tests" "import" "failure" "cycle.dhall"]])
 

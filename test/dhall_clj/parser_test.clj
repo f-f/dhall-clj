@@ -312,7 +312,7 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Broken annotations?
+   ;; Waiting for https://github.com/dhall-lang/dhall-haskell/pull/779
    ["dhall-lang" "tests" "parser" "success" "annotations"]
    ["dhall-lang" "tests" "parser" "success" "list"]
    ;; No CBOR for imports yet
@@ -329,12 +329,12 @@
    ;; Something's broken
    ["dhall-lang" "tests" "parser" "success" "largeExpression"]
 
+   ;; Waiting on issue #28
+   ["dhall-lang" "tests" "parser" "success" "quotedPaths"]
    ;; Waiting on issue #26
    ["dhall-lang" "tests" "parser" "success" "double"]
    ["dhall-lang" "tests" "parser" "failure" "doubleBoundsNeg.dhall"]
-   ["dhall-lang" "tests" "parser" "failure" "doubleBoundsPos.dhall"]
-   ;; Waiting on issue #28
-   ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])
+   ["dhall-lang" "tests" "parser" "failure" "doubleBoundsPos.dhall"]])
 
 
 (defn valid-testcases []
