@@ -16,7 +16,7 @@
                  [clj-http "3.9.1"]
                  [cc.qbits/ex "0.1.3"]
                  [com.gfredericks/catch-data "0.2.0"]
-                 [mvxcvi/clj-cbor "0.6.0"]
+                 [mvxcvi/clj-cbor "0.7.1"]
                  [medley "1.0.0"]
                  ;; We require glow here only so that we can exclude instaparse
                  ;; during Cloverage execution. See cloverage/cloverage/issues/109
