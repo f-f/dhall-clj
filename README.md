@@ -53,7 +53,7 @@ the issues labeled with ["standard compliance"][standard-compliance-issues].
 ## HOWTO
 
 ```clojure
-(require '[dhall-clojure.core :refer [input input-ast]])
+(require '[dhall-clj.core :refer [input input-ast]])
 
 ;; We can run compile and run Dhall expression in Clojure with the `input` function.
 ;; Note that the result of the evaluation is a Clojure value
