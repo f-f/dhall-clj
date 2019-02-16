@@ -194,6 +194,9 @@
   (alpha-normalize [this]
     (map-chunks this alpha-normalize))
 
+  dhall_clj.ast.TextShow
+  (alpha-normalize [this] this)
+
   dhall_clj.ast.TextAppend
   (alpha-normalize [this]
     (-> this

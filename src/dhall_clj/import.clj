@@ -404,6 +404,9 @@
   (resolve-imports [this state]
     (map-chunks this (fn [c] (resolve-imports c state))))
 
+  dhall_clj.ast.TextShow
+  (resolve-imports [this state] this)
+
   dhall_clj.ast.TextAppend
   (resolve-imports [this state]
     (-> this

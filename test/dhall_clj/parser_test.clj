@@ -312,9 +312,6 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Waiting for https://github.com/dhall-lang/dhall-haskell/pull/779
-   ["dhall-lang" "tests" "parser" "success" "annotations"]
-   ["dhall-lang" "tests" "parser" "success" "list"]
    ;; No CBOR for imports yet
    ["dhall-lang" "tests" "parser" "success" "collectionImportType"]
    ["dhall-lang" "tests" "parser" "success" "parenthesizeUsing"]
@@ -324,7 +321,8 @@
    ["dhall-lang" "tests" "parser" "success" "pathTermination"]
    ["dhall-lang" "tests" "parser" "success" "importAlt"]
    ["dhall-lang" "tests" "parser" "success" "asText"]
-   ;; Broken operators?
+   ["dhall-lang" "tests" "parser" "success" "unicodePaths"]
+   ;; https://github.com/dhall-lang/dhall-lang/issues/373
    ["dhall-lang" "tests" "parser" "success" "operators"]
    ;; Something's broken
    ["dhall-lang" "tests" "parser" "success" "largeExpression"]

@@ -25,7 +25,11 @@
   [test-folder]
   (let [files (->> (list-files test-folder)
                  (remove failure-case?))
-        map-of-testcases (group-by #(->> % str (drop-last 7) (apply str)) files)]
+        map-of-testcases (group-by #(-> % str
+                                       (string/replace #"B.json" "")
+                                       (string/replace #"A.dhall" "")
+                                       (string/replace #"B.dhall" ""))
+                                   files)]
     (map-vals
       (fn [a-and-b]
         ;; We sort so we get the A.dhall file first

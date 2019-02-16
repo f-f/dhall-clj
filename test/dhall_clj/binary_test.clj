@@ -40,6 +40,7 @@
                 (->DoubleT)
                 (->DoubleShow)
                 (->TextT)
+                (->TextShow)
                 (->ListT)
                 (->ListBuild)
                 (->ListFold)

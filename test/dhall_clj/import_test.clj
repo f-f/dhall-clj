@@ -14,7 +14,7 @@
              [me.raynes.fs :as fs]))
 
 
-(def prelude-hash "26e13b153cb428366610110d4d8f0c135e22b20179d5478bb16b1b83b3f2ca13")
+(def prelude-hash "e3be3dba308637ad7ab6d4ce9a11a342b087efbf2aa801c88a05a6babaae8e48")
 
 (def simple-success-cases
   {"Prelude import with hash"

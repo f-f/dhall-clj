@@ -341,6 +341,10 @@
       chunks)
     (->TextT))
 
+  dhall_clj.ast.TextShow
+  (typecheck [this _ctx]
+    (->Pi "_" (->TextT) (->TextT)))
+
   dhall_clj.ast.TextAppend
   (typecheck [{:keys [a b] :as this} ctx]
     (typecheck-binary this ctx TextT fail/cant-text-append!))

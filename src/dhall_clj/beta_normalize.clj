@@ -1,12 +1,13 @@
 (ns dhall-clj.beta-normalize
   (:require [dhall-clj.alpha-normalize :refer [alpha-normalize]]
             [dhall-clj.ast :refer :all]
+            [clojure.string :as string]
             [medley.core :refer [map-vals]])
   (:import [dhall_clj.ast NaturalLit TextLit BoolLit Lam App ListBuild ListFold
             NaturalBuild NaturalFold OptionalBuild OptionalFold NaturalIsZero
             NaturalEven NaturalOdd NaturalToInteger NaturalShow IntegerLit
             IntegerShow IntegerToDouble DoubleLit DoubleShow ListLit ListLength
-            ListHead ListLast ListIndexed ListReverse RecordLit
+            ListHead ListLast ListIndexed ListReverse RecordLit TextShow
             UnionLit RecordT UnionT Some None]))
 
 (defprotocol IBetaNormalize
@@ -21,6 +22,24 @@
   (let [ab-normalize (comp beta-normalize alpha-normalize)]
     (= (ab-normalize a)
        (ab-normalize b))))
+
+
+(defn text-show [text]
+  (let [char-map {\" "\\\""
+                  \$ "\\u0024"
+                  \\ "\\\\"
+                  \backspace "\\b"
+                  \newline "\\n"
+                  \return "\\r"
+                  \tab "\\t"}
+        escape-control (fn [char]
+                         (if (<= (int char) 30)
+                           (format "\\u%04x" (int char))
+                           char))]
+    (str "\""
+         (apply str (map escape-control
+                         (seq (string/escape text char-map))))
+         "\"")))
 
 
 (extend-protocol IBetaNormalize
@@ -266,6 +285,13 @@
                   val      (:e (:b (:a (:a f'))))]
               (beta-normalize (->App just val)))
 
+            ;; TextShow
+            (and (instance? TextShow f')
+                 (instance? TextLit a')
+                 (= 1 (count (:chunks a')))
+                 (string? (first (:chunks a'))))
+            (beta-normalize (update a' :chunks (partial map text-show)))
+
             :else (->App f' a'))))))
 
   dhall_clj.ast.Let
@@ -468,6 +494,9 @@
                                                      (concat (:chunks l) (:chunks r))))
                      :else                       (->TextAppend l r)))]
       (decide (beta-normalize a) (beta-normalize b))))
+
+  dhall_clj.ast.TextShow
+  (beta-normalize [this] this)
 
   dhall_clj.ast.ListT
   (beta-normalize [this] this)

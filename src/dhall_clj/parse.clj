@@ -45,6 +45,7 @@
    "List/reverse"
    "Optional/fold"
    "Optional/build"
+   "Text/show"
    "if"
    "then"
    "else"
@@ -348,7 +349,8 @@
       :List-indexed-raw      (->ListIndexed)
       :List-reverse-raw      (->ListReverse)
       :Optional-fold-raw     (->OptionalFold)
-      :Optional-build-raw    (->OptionalBuild))))
+      :Optional-build-raw    (->OptionalBuild)
+      :Text-show-raw         (->TextShow))))
 
 (defn identifier [e]
   (let [children (:c e)
@@ -359,7 +361,7 @@
                  (->> children first :c first :c (apply str)))
         ;; at the end of `children` there might be a DeBrujin index
         maybe-index (-> children butlast last)
-        index? (= :natural-raw (:t maybe-index))
+        index? (= :natural-literal-raw (:t maybe-index))
         index (if index?
                 (-> maybe-index :c first :c first read-string)
                 0)
@@ -622,9 +624,8 @@
                                  "t"  "\t"
                                  ;; Otherwise we're reading in a \uXXXX char
                                  (->> (nthrest content 2)
-                                    (mapv (fn [{:keys [c]}]
-                                            (-> c first :c first)))
-                                    (apply str "0x")
+                                    compact
+                                    (str "0x")
                                     hex->num
                                     char))]
                   (recur (rest children)

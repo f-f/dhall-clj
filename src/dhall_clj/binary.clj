@@ -11,31 +11,17 @@
 (declare cbor)
 (declare decbor)
 
-(def protocol-version
-  "The currently supported version for the binary protocol"
-  "5.0.0")
-
-(def supported-versions
-  "A list of versions that will be accepted for deserialization"
-  [protocol-version])
-
 (defn encode
   "Encode `e` (which should be Dhall AST) into its binary form.
-  `version` is one of `supported-versions`. Will return a `ByteArray`."
-  ([e] (encode e protocol-version))
-  ([e version]
-   (if (some #{version} supported-versions)
-     (cbor/encode [version (cbor e)])
-     (fail/unsupported-version-encoding! version supported-versions))))
+  Will return a `ByteArray`."
+  [e]
+  (cbor/encode (cbor e)))
 
 (defn decode
   "Takes a bytearray `binary-expr`, and tries to decode it into Dhall AST.
   Will throw an exception of type `dhall-clj.fail/binary` on malformed input."
   [^bytes binary-expr]
-  (let [[version expression] (cbor/decode binary-expr)]
-    (if (some #{version} supported-versions)
-      (decbor expression)
-      (fail/unsupported-version-decoding! version supported-versions))))
+  (decbor (cbor/decode binary-expr)))
 
 
 ;;;; CBOR -> Dhall AST
@@ -78,6 +64,7 @@
       "List/reverse"      (->ListReverse)
       "Optional/fold"     (->OptionalFold)
       "Optional/build"    (->OptionalBuild)
+      "Text/show"         (->TextShow)
       "Bool"              (->BoolT)
       "Optional"          (->OptionalT)
       "None"              (->None)
@@ -381,6 +368,10 @@
   dhall_clj.ast.TextLit
   (cbor [{:keys [chunks]}]
     (into [] (concat [18] (map #(if (string? %) % (cbor %)) chunks))))
+
+  dhall_clj.ast.TextShow
+  (cbor [this]
+    "Text/show")
 
   dhall_clj.ast.TextAppend
   (cbor [{:keys [a b]}]

@@ -104,24 +104,6 @@
 ;; Serialization
 ;;
 
-(defn unsupported-version-encoding!
-  "Throws an ex-info if the version we are trying to encode with is not supported"
-  [version versions]
-  (throw-data
-    "Serialization error: version not supported"
-    {:type ::unsupported-version-encoding
-     :supported-versions versions
-     :current-version version}))
-
-(defn unsupported-version-decoding!
-  "Throws an ex-info if the version we are trying to decode with is not supported"
-  [version versions]
-  (throw-data
-    "Deserialization error: version not supported"
-    {:type ::unsupported-version-decoding
-     :supported-versions versions
-     :current-version version}))
-
 (defn vector-too-short!
   "Throws an ex-info if the vector `e` has less than `n` elems"
   [e n]

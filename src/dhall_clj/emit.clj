@@ -173,6 +173,10 @@
         (apply str chunks')
         `(apply str ~chunks'))))
 
+  dhall_clj.ast.TextShow
+  (emit [this]
+    `str) ;; TODO
+
   dhall_clj.ast.TextAppend
   (emit [{:keys [a b]}]
     `(str ~(emit a) ~(emit b)))

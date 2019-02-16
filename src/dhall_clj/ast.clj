@@ -57,6 +57,7 @@
 (defrecord DoubleShow [])
 (defrecord TextT [])
 (defrecord TextLit [chunks])
+(defrecord TextShow [])
 (defrecord TextAppend [a b])
 (defrecord ListT [])
 (defrecord ListLit [type? exprs])
@@ -291,6 +292,9 @@
   TextLit
   (shift [this diff var]
     (map-chunks this (fn [c] (shift c diff var))))
+
+  TextShow
+  (shift [this diff var] this)
 
   TextAppend
   (shift [this diff var]
@@ -595,6 +599,9 @@
   TextLit
   (subst [this var e]
     (map-chunks this (fn [c] (subst c var e))))
+
+  TextShow
+  (subst [this var e] this)
 
   TextAppend
   (subst [this var e]
