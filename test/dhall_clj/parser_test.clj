@@ -330,9 +330,7 @@
    ;; Waiting on issue #28
    ["dhall-lang" "tests" "parser" "success" "quotedPaths"]
    ;; Waiting on issue #26
-   ["dhall-lang" "tests" "parser" "success" "double"]
-   ["dhall-lang" "tests" "parser" "failure" "doubleBoundsNeg.dhall"]
-   ["dhall-lang" "tests" "parser" "failure" "doubleBoundsPos.dhall"]])
+   ["dhall-lang" "tests" "parser" "success" "double"]])
 
 
 (defn valid-testcases []
@@ -345,8 +343,8 @@
   (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
     (println "TESTCASE" testcase)
     (testing testcase
-      (is (= (-> actual parse expr binary/cbor)
-             (-> expected json/parse-string))))))
+      (is (= (-> expected json/parse-string)
+             (-> actual parse expr binary/cbor))))))
 
 
 (defn valid-failing-testcases []

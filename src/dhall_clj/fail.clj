@@ -15,8 +15,9 @@
 ;; Parsing
 ;;
 
-(ex/derive ::parsing      ::read)
-(ex/derive ::ast-building ::read)
+(ex/derive ::parsing              ::read)
+(ex/derive ::ast-building         ::read)
+(ex/derive ::double-out-of-bounds ::read)
 
 (defn parsing!
   "Throws an ex-info from a failure in parsing the string"
@@ -36,6 +37,15 @@
      :tree tree
      :unmatched (:t tree)
      :tree-printed (pr-str tree)}))
+
+(defn double-out-of-bounds!
+  "Throws an ex-info if the parser encounters a Double which is out of bounds"
+  [double-string e]
+  (throw-data
+   "Parse error: Double out of bounds"
+   {:type ::double-out-of-bounds
+    :double-string double-string
+    :tree e}))
 
 
 ;;

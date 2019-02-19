@@ -30,8 +30,6 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Waiting on issue #26
-   ["dhall-lang" "tests" "import" "success" "asText"]
    ;; Waiting on issue #34
    ["dhall-lang" "tests" "import" "failure" "referentiallyInsane.dhall"]
    ;; Waiting for proper cycle detection

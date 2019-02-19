@@ -324,6 +324,8 @@
       :List-raw     (->ListT)
       :True-raw     (->BoolLit true)
       :False-raw    (->BoolLit false)
+      :NaN-raw      (->DoubleLit Double/NaN)
+      :Infinity-raw (->DoubleLit Double/POSITIVE_INFINITY)
       :Type-raw     (->Const :type)
       :Kind-raw     (->Const :kind)
       :Sort-raw     (->Const :sort))))
@@ -473,9 +475,14 @@
   (let [first-tag (-> e :c first :t)
         children (:c e)]
     (case first-tag
-      :double-literal  (-> children first compact read-string ->DoubleLit)
+      :double-literal  (let [d (-> children first compact read-string)]
+                         (if (or (= d Double/NEGATIVE_INFINITY)
+                                 (= d Double/POSITIVE_INFINITY))
+                           (fail/double-out-of-bounds! (-> children first compact) e)
+                           (->DoubleLit d)))
       :natural-literal (-> children first compact read-string ->NaturalLit)
       :integer-literal (-> children first compact read-string ->IntegerLit)
+      nil              (->DoubleLit Double/NEGATIVE_INFINITY) ;; TODO: better way to do this?
       :text-literal                          (-> children first expr)
       :open-brace                            (-> children second expr)
       :open-angle                            (-> children second expr)

@@ -84,6 +84,12 @@
     (boolean? e)
     (->BoolLit e)
 
+    (double? e)
+    (->DoubleLit e)
+
+    (float? e)
+    (->DoubleLit e)
+
     (vector? e)
     (let [;; Here we fail because if we got an array it must have at least
           ;; - the tag representing what it is
@@ -169,29 +175,28 @@
                (->BoolIf (decbor test) (decbor then) (decbor else)))
           15 (->NaturalLit (second e))
           16 (->IntegerLit (second e))
-          17 (->DoubleLit (second e))
           18 (->TextLit
-               ;; Here we exploit the fact that Text literals always have an odd count
-               ;; and they alternate strings and exprs.
-               ;; So we get the first string and then loop until we don't have any more
-               ;; tuples of exprs and strings
-               (let [[str1 & chunks] (rest e)]
-                 (loop [res [str1]
-                        cs  chunks]
-                   (if (seq cs)
-                     (let [[e s & more] cs]
-                       (recur (conj res (decbor e) s) more))
-                     res))))
+              ;; Here we exploit the fact that Text literals always have an odd count
+              ;; and they alternate strings and exprs.
+              ;; So we get the first string and then loop until we don't have any more
+              ;; tuples of exprs and strings
+              (let [[str1 & chunks] (rest e)]
+                (loop [res [str1]
+                       cs  chunks]
+                  (if (seq cs)
+                    (let [[e s & more] cs]
+                      (recur (conj res (decbor e) s) more))
+                    res))))
           ;; TODO imports
           25 (->Let
-               (mapv
-                 (fn [[label type? body]]
-                   (->Binding
-                     label
-                     (when-not (nil? type?) (decbor type?))
-                     (decbor body)))
-                 (partition 3 (butlast (rest e))))
-               (decbor (last e)))
+              (mapv
+               (fn [[label type? body]]
+                 (->Binding
+                  label
+                  (when-not (nil? type?) (decbor type?))
+                  (decbor body)))
+               (partition 3 (butlast (rest e))))
+              (decbor (last e)))
           26 (let [[val typ] (rest e)]
                (assert-len! e 3)
                (->Annot (decbor val) (decbor typ))))))))
@@ -355,7 +360,11 @@
 
   dhall_clj.ast.DoubleLit
   (cbor [{:keys [n]}]
-    [17 n])
+    (cond
+      (= n Double/POSITIVE_INFINITY) n
+      (= n Double/NEGATIVE_INFINITY) n
+      (= n (float n))                (float n)
+      :else                          n))
 
   dhall_clj.ast.DoubleShow
   (cbor [this]
