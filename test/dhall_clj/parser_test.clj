@@ -3,6 +3,7 @@
             [lambdaisland.uri :refer [uri]]
             [cheshire.core :as json]
             [clojure.java.io :as io]
+            [clj-cbor.core :as cbor]
             [dhall-clj.test-utils :refer :all]
             [dhall-clj.ast :refer :all]
             [dhall-clj.parse :refer [parse expr]]
@@ -322,19 +323,15 @@
    ["dhall-lang" "tests" "parser" "success" "importAlt"]
    ["dhall-lang" "tests" "parser" "success" "asText"]
    ["dhall-lang" "tests" "parser" "success" "unicodePaths"]
-   ;; https://github.com/dhall-lang/dhall-lang/issues/373
-   ["dhall-lang" "tests" "parser" "success" "operators"]
    ;; Something's broken
    ["dhall-lang" "tests" "parser" "success" "largeExpression"]
 
    ;; Waiting on issue #28
-   ["dhall-lang" "tests" "parser" "success" "quotedPaths"]
-   ;; Waiting on issue #26
-   ["dhall-lang" "tests" "parser" "success" "double"]])
+   ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])
 
 
 (defn valid-testcases []
-  (let [all (success-testcases (str test-folder "/success"))]
+  (let [all (success-binary-testcases (str test-folder "/success"))]
     (->> problematic
        (map #(->> % (apply io/file) str))
        (apply dissoc all))))
@@ -343,8 +340,8 @@
   (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
     (println "TESTCASE" testcase)
     (testing testcase
-      (is (= (-> expected json/parse-string)
-             (-> actual parse expr binary/cbor))))))
+      (is (= (-> expected seq)
+             (-> actual parse expr binary/encode seq))))))
 
 
 (defn valid-failing-testcases []

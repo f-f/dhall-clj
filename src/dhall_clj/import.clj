@@ -127,20 +127,6 @@
     (io/file dhall-dir hash)))
 
 
-;; From https://stackoverflow.com/questions/23018870
-(defn slurp-bytes
-  "Slurp the bytes from a slurpable thing"
-  [x]
-  (with-open [out (java.io.ByteArrayOutputStream.)]
-    (clojure.java.io/copy (clojure.java.io/input-stream x) out)
-    (.toByteArray out)))
-
-(defn spit-bytes
-  "Spit bytes to a file"
-  [f content]
-  (with-open [out (io/output-stream (io/file f))]
-    (.write out content)))
-
 (defn expr-from-import
   "Given a Missing, Env, Local or Remote, fetches them
   from the appropriate place, and returns and expression
@@ -152,7 +138,7 @@
                     hash?
                     get-cached-file
                     (#(when (fs/exists? %) %))
-                    slurp-bytes
+                    binary/slurp-bytes
                     ((fn [contents]
                        (let [actual-hash (sha-256 contents)]
                          (if (= actual-hash hash?)
@@ -174,7 +160,7 @@
           bytes (binary/encode normalized)
           actual-hash (sha-256 bytes)]
       (if (= actual-hash hash?)
-        (spit-bytes (get-cached-file actual-hash) bytes)
+        (binary/spit-bytes (get-cached-file actual-hash) bytes)
         (fail/hash-mismatch! import actual-hash normalized)))))
 
 (defprotocol IResolve

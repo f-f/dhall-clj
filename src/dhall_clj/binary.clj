@@ -2,6 +2,7 @@
   (:require [clojure.string :as string]
             [medley.core :refer [map-vals]]
             [dhall-clj.ast :refer :all]
+            [clojure.java.io :as io]
             [clj-cbor.core :as cbor]
             [dhall-clj.fail :as fail])
   (:import [dhall_clj.ast App]))
@@ -456,19 +457,19 @@
 
   dhall_clj.ast.RecordT
   (cbor [{:keys [kvs]}]
-    [7 (map-vals cbor kvs)])
+    [7 (->> (map-vals cbor kvs) (into (sorted-map)))])
 
   dhall_clj.ast.RecordLit
   (cbor [{:keys [kvs]}]
-    [8 (map-vals cbor kvs)])
+    [8 (->> (map-vals cbor kvs) (into (sorted-map)))])
 
   dhall_clj.ast.UnionT
   (cbor [{:keys [kvs]}]
-    [11 (map-vals cbor kvs)])
+    [11 (->> (map-vals cbor kvs) (into (sorted-map)))])
 
   dhall_clj.ast.UnionLit
   (cbor [{:keys [k v kvs]}]
-    [12 k (cbor v) (map-vals cbor kvs)])
+    [12 k (cbor v) (->> (map-vals cbor kvs) (into (sorted-map)))])
 
   dhall_clj.ast.CombineTypes
   (cbor [{:keys [a b]}]
@@ -503,3 +504,20 @@
   dhall_clj.ast.ImportAlt
   (cbor [{:keys [a b]}]
     [3 11 (cbor a) (cbor b)]))
+
+
+;; Utils
+
+;; From https://stackoverflow.com/questions/23018870
+(defn slurp-bytes
+  "Slurp the bytes from a slurpable thing"
+  [x]
+  (with-open [out (java.io.ByteArrayOutputStream.)]
+    (clojure.java.io/copy (clojure.java.io/input-stream x) out)
+    (.toByteArray out)))
+
+(defn spit-bytes
+  "Spit bytes to a file"
+  [f content]
+  (with-open [out (io/output-stream (io/file f))]
+    (.write out content)))

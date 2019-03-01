@@ -1,5 +1,6 @@
 (ns dhall-clj.test-utils
   (:require [medley.core :refer [map-vals]]
+            [dhall-clj.binary :refer [slurp-bytes]]
             [clojure.string :as string]
             [clojure.java.io :as io]))
 
@@ -26,7 +27,6 @@
   (let [files (->> (list-files test-folder)
                  (remove failure-case?))
         map-of-testcases (group-by #(-> % str
-                                       (string/replace #"B.json" "")
                                        (string/replace #"A.dhall" "")
                                        (string/replace #"B.dhall" ""))
                                    files)]
@@ -46,3 +46,22 @@
   (let [files (->> (list-files test-folder)
                  (filter failure-case?))]
     (into {} (mapv #(vector (str %) (slurp %)) files))))
+
+
+(defn success-binary-testcases
+  "Returns a record of records {'testcase name' {:actual Text, :expected ByteArray}}
+  for the 'successful' test cases."
+  [test-folder]
+  (let [files (->> (list-files test-folder)
+                 (remove failure-case?))
+        map-of-testcases (group-by #(-> % str
+                                       (string/replace #"A.dhall" "")
+                                       (string/replace #"B.dhallb" ""))
+                                   files)]
+    (map-vals
+     (fn [a-and-b]
+       ;; We sort so we get the A.dhall file first
+       (let [[actual expected] (sort a-and-b)]
+         {:actual   (slurp actual)
+          :expected (slurp-bytes expected)}))
+     map-of-testcases)))
