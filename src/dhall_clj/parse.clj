@@ -54,7 +54,6 @@
    "as"
    "using"
    "merge"
-   "constructors"
    "Some"])
 
 (defn patch-grammar [grammar]
@@ -424,13 +423,9 @@
 (defmethod expr :application-expression [{:keys [c t]}]
   (if (> (count c) 1)
     (let [exprs (remove #(= :whitespace-chunk (:t %)) c)
-          constructors? (= :constructors (-> c first :t))
           some? (= :Some (-> c first :t))]
       (loop [more (nnext exprs)
              app (cond
-                   constructors?
-                   (->Constructors (expr (second exprs)))
-
                    some?
                    (->Some (expr (second exprs)))
 

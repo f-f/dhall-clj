@@ -753,17 +753,6 @@
         ktsB)
       t))
 
-  dhall_clj.ast.Constructors
-  (typecheck [{:keys [e] :as this} ctx]
-    (typecheck e ctx)
-    (let [e' (beta-normalize e)]
-      (if (instance? UnionT e')
-        (typecheck e' ctx)
-        (fail/constructors-require-a-union-type!
-          ctx
-          this
-          {:type e :type-normal e'}))))
-
   dhall_clj.ast.Field
   (typecheck [{:keys [e k] :as this} ctx]
     (let [eT (-> e (typecheck ctx) beta-normalize)]

@@ -83,7 +83,6 @@
 (defrecord CombineTypes [a b])
 (defrecord Prefer [a b])
 (defrecord Merge [a b type?])
-(defrecord Constructors [e])
 (defrecord Field [e k])
 (defrecord Project [e ks])
 (defrecord ImportAlt [a b])
@@ -396,10 +395,6 @@
        (update :a shift diff var)
        (update :b shift diff var)))
 
-  Constructors
-  (shift [this diff var]
-    (update this :e shift diff var))
-
   Merge
   (shift [this diff var]
     (let [type?  (:type? this)
@@ -709,10 +704,6 @@
        (update :a subst var e)
        (update :b subst var e)
        (assoc :type? (when type? (subst type? var e)))))
-
-  Constructors
-  (subst [this var e]
-    (update this :e subst var e))
 
   Field
   (subst [this var e]

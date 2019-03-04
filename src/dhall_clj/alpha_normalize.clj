@@ -304,10 +304,6 @@
        (update :b alpha-normalize)
        (assoc :type? (when type? (alpha-normalize type?)))))
 
-  dhall_clj.ast.Constructors
-  (alpha-normalize [this]
-    (update this :e alpha-normalize))
-
   dhall_clj.ast.Field
   (alpha-normalize [this]
     (update this :e alpha-normalize))

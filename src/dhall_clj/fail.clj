@@ -187,7 +187,6 @@
 (typecheck-ex cant-project)
 (typecheck-ex cant-text-append)
 (typecheck-ex combine-records-requires-record-type)
-(typecheck-ex constructors-require-a-union-type)
 (typecheck-ex duplicate-alternative)
 (typecheck-ex field-annotation-mismatch)
 (typecheck-ex field-collision)

@@ -170,7 +170,6 @@
           12 (let [[k v kvs] (rest e)]
                (assert-len! e 4)
                (->UnionLit k (decbor v) (map-vals decbor kvs)))
-          13 (->Constructors (decbor (second e)))
           14 (let [[test then else] (rest e)]
                (assert-len! e 4)
                (->BoolIf (decbor test) (decbor then) (decbor else)))
@@ -488,10 +487,6 @@
     (if type?
       [6 (cbor a) (cbor b) (cbor type?)]
       [6 (cbor a) (cbor b)]))
-
-  dhall_clj.ast.Constructors
-  (cbor [{:keys [e]}]
-    [13 (cbor e)])
 
   dhall_clj.ast.Field
   (cbor [{:keys [e k]}]

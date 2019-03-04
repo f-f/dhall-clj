@@ -88,7 +88,6 @@
 (defn union-type   [a] (gen/fmap ->UnionT (kvs a)))
 (defn union        [a b] (gen/fmap (partial apply ->UnionLit) (gen/tuple label a (kvs b))))
 (defn merge'       [a b] (gen/fmap (partial apply ->Merge) (gen/tuple a b (maybe b))))
-(defn constructors [a] (gen/fmap ->Constructors a))
 (defn field        [a] (gen/fmap (partial apply ->Field) (gen/tuple a label)))
 (defn project      [a] (gen/fmap (partial apply ->Project) (gen/tuple a (gen/not-empty (gen/vector label)))))
 
@@ -144,7 +143,6 @@
            (union-type a)
            (union a b)
            (merge' a b)
-           (constructors a)
            (field a)
            (project a)
            (app a b)

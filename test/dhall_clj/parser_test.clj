@@ -172,12 +172,6 @@
    ["Natural/even 3"
     (->App (->NaturalEven) (->NaturalLit 3))]
 
-   ["constructors < A : Bool >"
-    (->Constructors (->UnionT {"A" (->BoolT)}))]
-
-   ["constructors < A : Bool > 2"
-    (->App (->Constructors (->UnionT {"A" (->BoolT)})) (->NaturalLit 2))]
-
    ["foo.a"
     (->Field (->Var "foo" 0) "a")]
 

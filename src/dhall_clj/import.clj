@@ -493,10 +493,6 @@
        (update :a resolve-imports state)
        (update :b resolve-imports state)))
 
-  dhall_clj.ast.Constructors
-  (resolve-imports [this state]
-    (update this :e resolve-imports state))
-
   dhall_clj.ast.Merge
   (resolve-imports [{:keys [type?] :as this} state]
     (-> this

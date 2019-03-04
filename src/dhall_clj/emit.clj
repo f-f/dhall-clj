@@ -278,10 +278,6 @@
   (emit [{:keys [a b type?]}]
     "Merge") ;; TODO
 
-  dhall_clj.ast.Constructors
-  (emit [{:keys [e]}]
-    "Constructors") ;; TODO
-
   dhall_clj.ast.Field
   (emit [{:keys [e k]}]
     `(get ~(emit e) ~k))

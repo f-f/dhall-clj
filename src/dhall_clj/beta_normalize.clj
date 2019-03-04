@@ -645,13 +645,6 @@
                  (:v b')))
         (->Merge a' b' type?'))))
 
-  dhall_clj.ast.Constructors
-  (beta-normalize [this]
-    (let [e' (beta-normalize (:e this))]
-      (if (instance? UnionT e')
-        e'
-        (->Constructors e'))))
-
   dhall_clj.ast.Field
   (beta-normalize [{:keys [e k] :as this}]
     (let [e' (beta-normalize e)]
