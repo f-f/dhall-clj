@@ -18,7 +18,6 @@
    "Integer"
    "Double"
    "Text"
-   "List"
    "True"
    "False"
    "NaN"
@@ -26,6 +25,7 @@
    "Type"
    "Kind"
    "Sort"
+   "List"
    "Natural/fold"
    "Natural/build"
    "Natural/isZero"
@@ -45,25 +45,38 @@
    "List/reverse"
    "Optional/fold"
    "Optional/build"
-   "Text/show"
-   "if"
-   "then"
-   "else"
-   "let"
-   "in"
-   "as"
-   "using"
-   "merge"
-   "Some"])
+   "Text/show"])
+
+(def builtins
+  (concat
+   keywords
+   ["if"
+    "then"
+    "else"
+    "let"
+    "in"
+    "as"
+    "using"
+    "merge"
+    "missing"
+    "Some"]))
 
 (defn patch-grammar [grammar]
-  (let [keywords-rule (str "keyword = \"" (str/join " \"\n        / \"" keywords) " \"")]
+  (let [keywords-rule (str "keyword = \""
+                           (str/join "\" whitespace\n        / \"" keywords)
+                           "\" whitespace")
+        prevent-builtins (str "builtin = \""
+                              (str/join "\" nonempty-whitespace\n        / \"" builtins)
+                              "\" nonempty-whitespace")]
     (str (-> grammar
-           ;; We add negative lookahead to avoid matching keywords in simple labels
-           (str/replace #"simple-label = (.*)" "simple-label = !keyword ($1)")
-           ;; Grammar apparently doesn't allow lowercase hashes
-           (str/replace #"HEXDIG = " "HEXDIG = \"a\" /  \"b\" / \"c\" / \"d\" / \"e\" / \"f\" / "))
+            ;; We add negative lookahead to avoid matching keywords in simple labels
+            (str/replace #"simple-label = (.*)" "simple-label = !builtin ($1)")
+            (str/replace #"    / identifier" "    / keyword / identifier")
+            ;; Grammar apparently doesn't allow lowercase hashes
+            (str/replace #"HEXDIG = " "HEXDIG = \"a\" /  \"b\" / \"c\" / \"d\" / \"e\" / \"f\" / "))
          "\n"
+         prevent-builtins
+         "\n\n"
          keywords-rule)))
 
 (def dhall-parser
@@ -139,6 +152,9 @@
   (first-child-expr e))
 
 (defmethod expr :import-expression [e]
+  (first-child-expr e))
+
+(defmethod expr :any-label [e]
   (first-child-expr e))
 
 ;;
@@ -310,78 +326,59 @@
         value (-> c first expr)]
     (->OptionalLit typ value)))
 
-(defmethod expr :reserved-raw [e]
-  (let [first-tag (-> e :c first :t)]
-    (case first-tag
-      :Bool-raw     (->BoolT)
-      :Optional-raw (->OptionalT)
-      :None-raw     (->None)
-      :Natural-raw  (->NaturalT)
-      :Integer-raw  (->IntegerT)
-      :Double-raw   (->DoubleT)
-      :Text-raw     (->TextT)
-      :List-raw     (->ListT)
-      :True-raw     (->BoolLit true)
-      :False-raw    (->BoolLit false)
-      :NaN-raw      (->DoubleLit Double/NaN)
-      :Infinity-raw (->DoubleLit Double/POSITIVE_INFINITY)
-      :Type-raw     (->Const :type)
-      :Kind-raw     (->Const :kind)
-      :Sort-raw     (->Const :sort))))
-
-(defmethod expr :reserved-namespaced-raw [e]
-  (let [first-tag (-> e :c first :t)]
-    (case first-tag
-      :Natural-fold-raw      (->NaturalFold)
-      :Natural-build-raw     (->NaturalBuild)
-      :Natural-isZero-raw    (->NaturalIsZero)
-      :Natural-even-raw      (->NaturalEven)
-      :Natural-odd-raw       (->NaturalOdd)
-      :Natural-toInteger-raw (->NaturalToInteger)
-      :Natural-show-raw      (->NaturalShow)
-      :Integer-toDouble-raw  (->IntegerToDouble)
-      :Integer-show-raw      (->IntegerShow)
-      :Double-show-raw       (->DoubleShow)
-      :List-build-raw        (->ListBuild)
-      :List-fold-raw         (->ListFold)
-      :List-length-raw       (->ListLength)
-      :List-head-raw         (->ListHead)
-      :List-last-raw         (->ListLast)
-      :List-indexed-raw      (->ListIndexed)
-      :List-reverse-raw      (->ListReverse)
-      :Optional-fold-raw     (->OptionalFold)
-      :Optional-build-raw    (->OptionalBuild)
-      :Text-show-raw         (->TextShow))))
-
 (defn identifier [e]
   (let [children (:c e)
         ;; if we have  a simple identifier, the "prefix" is just the label
-        ;; if instead it's a prefixed identifier, the prefix is the reserved word
-        prefix (if (= :identifier (:t e))
-                 (->> children first expr)
-                 (->> children first :c first :c (apply str)))
+        var (->> children first expr)
         ;; at the end of `children` there might be a DeBrujin index
         maybe-index (-> children butlast last)
         index? (= :natural-literal-raw (:t maybe-index))
         index (if index?
                 (-> maybe-index :c first :c first read-string)
-                0)
-        ;; the label is the rest of the chars
-        ;; if it's an identifier without prefix this is going to
-        ;; be an empty string, so all good
-        label (->> children
-                 rest
-                 (drop-last (if index? 3 1))
-                 compact)]
-    (->Var (str prefix label) index)))
+                0)]
+    (->Var var index)))
+
+(defmethod expr :keyword [e]
+  (let [var (->> e :c first)]
+    (case var
+      "Bool"              (->BoolT)
+      "Optional"          (->OptionalT)
+      "None"              (->None)
+      "Natural"           (->NaturalT)
+      "Integer"           (->IntegerT)
+      "Double"            (->DoubleT)
+      "Text"              (->TextT)
+      "List"              (->ListT)
+      "True"              (->BoolLit true)
+      "False"             (->BoolLit false)
+      "NaN"               (->DoubleLit Double/NaN)
+      "Infinity"          (->DoubleLit Double/POSITIVE_INFINITY)
+      "Type"              (->Const :type)
+      "Kind"              (->Const :kind)
+      "Sort"              (->Const :sort)
+      "Natural/fold"      (->NaturalFold)
+      "Natural/build"     (->NaturalBuild)
+      "Natural/isZero"    (->NaturalIsZero)
+      "Natural/even"      (->NaturalEven)
+      "Natural/odd"       (->NaturalOdd)
+      "Natural/toInteger" (->NaturalToInteger)
+      "Natural/show"      (->NaturalShow)
+      "Integer/toDouble"  (->IntegerToDouble)
+      "Integer/show"      (->IntegerShow)
+      "Double/show"       (->DoubleShow)
+      "List/build"        (->ListBuild)
+      "List/fold"         (->ListFold)
+      "List/length"       (->ListLength)
+      "List/head"         (->ListHead)
+      "List/last"         (->ListLast)
+      "List/indexed"      (->ListIndexed)
+      "List/reverse"      (->ListReverse)
+      "Optional/fold"     (->OptionalFold)
+      "Optional/build"    (->OptionalBuild)
+      "Text/show"         (->TextShow)
+      (fail/reserved-word! var e))))
 
 (defmethod expr :identifier [e]
-  (identifier e))
-
-(defmethod expr :identifier-reserved-namespaced-prefix [e]
-  (identifier e))
-
-(defmethod expr :identifier-reserved-prefix [e]
   (identifier e))
 
 (defmacro defexpr*
@@ -482,10 +479,7 @@
       :open-brace                            (-> children second expr)
       :open-angle                            (-> children second expr)
       :non-empty-list-literal                (-> children first expr)
-      :identifier-reserved-namespaced-prefix (-> children first expr)
-      :reserved-namespaced                   (-> children first :c first expr)
-      :identifier-reserved-prefix            (-> children first expr)
-      :reserved                              (-> children first :c first expr)
+      :keyword                               (-> children first expr)
       :identifier                            (-> children first expr)
       :open-parens                           (-> children second expr))))
 

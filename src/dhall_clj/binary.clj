@@ -77,6 +77,7 @@
       "Type"              (->Const :type)
       "Kind"              (->Const :kind)
       "Sort"              (->Const :sort)
+      "_"                 (fail/wrong-encoding-for-var!)
       (->Var e 0)) ;; If no builtins match, then it's a variable
 
     (integer? e)

@@ -8,6 +8,7 @@
 
 (ex/derive ::read      ::dhall-clj)
 (ex/derive ::imports   ::dhall-clj)
+(ex/derive ::bbinary   ::dhall-clj)
 (ex/derive ::typecheck ::dhall-clj)
 
 
@@ -18,6 +19,7 @@
 (ex/derive ::parsing              ::read)
 (ex/derive ::ast-building         ::read)
 (ex/derive ::double-out-of-bounds ::read)
+(ex/derive ::reserved-identifier  ::read)
 
 (defn parsing!
   "Throws an ex-info from a failure in parsing the string"
@@ -45,6 +47,15 @@
    "Parse error: Double out of bounds"
    {:type ::double-out-of-bounds
     :double-string double-string
+    :tree e}))
+
+(defn reserved-word!
+  "Throws an ex-info if the parser encounters a variable name which is reserved"
+  [var e]
+  (throw-data
+   "Parse error: tried to use a reserved identifier as variable name"
+   {:type ::reserved-identifier
+    :identifier var
     :tree e}))
 
 
@@ -114,6 +125,13 @@
 ;; Serialization
 ;;
 
+(ex/derive ::vector-too-short          ::binary)
+(ex/derive ::empty-val                 ::binary)
+(ex/derive ::fn-label-mismatch         ::binary)
+(ex/derive ::empty-list-must-have-type ::binary)
+(ex/derive ::wrong-encoding-for-var    ::binary)
+
+
 (defn vector-too-short!
   "Throws an ex-info if the vector `e` has less than `n` elems"
   [e n]
@@ -148,6 +166,14 @@
     "Deserialization error: empty list with empty type cannot be decoded"
     {:type ::empty-list-must-have-type
      :expr e}))
+
+(defn wrong-encoding-for-var!
+  "Throws an ex-info if the variable is not encoded correctly"
+  [e]
+  (throw-data
+   "Deserialization error: variable is not encoded correctly"
+   {:type ::wrong-encoding-for-var
+    :var e}))
 
 
 ;;
