@@ -71,7 +71,7 @@
     (str (-> grammar
             ;; We add negative lookahead to avoid matching keywords in simple labels
             (str/replace #"simple-label = (.*)" "simple-label = !builtin ($1)")
-            (str/replace #"    / identifier" "    / keyword / identifier")
+            (str/replace #"    / identifier-raw" "    / keyword / identifier-raw")
             ;; Grammar apparently doesn't allow lowercase hashes
             (str/replace #"HEXDIG = " "HEXDIG = \"a\" /  \"b\" / \"c\" / \"d\" / \"e\" / \"f\" / "))
          "\n"
@@ -151,17 +151,27 @@
 (defmethod expr :operator-expression [e]
   (first-child-expr e))
 
+(defmethod expr :import-expression-raw [e]
+  (first-child-expr e))
+
 (defmethod expr :import-expression [e]
   (first-child-expr e))
 
-(defmethod expr :any-label [e]
+(defmethod expr :any-label-raw [e]
   (first-child-expr e))
+
+(defmethod expr :label [e]
+  (first-child-expr e))
+
+(defmethod expr :identifier [e]
+  (first-child-expr e))
+
 
 ;;
 ;; Import rules
 ;;
 
-(defmethod expr :import [{:keys [c]}]
+(defmethod expr :import-raw [{:keys [c]}]
   (let [import (expr (first c))
         mode (if (> (count c) 1) ;; If yes, we have a "as Text"
                ;; FIXME: other imports modes go here, maybe make it more robust
@@ -169,40 +179,39 @@
                :code)]
     (assoc import :mode mode)))
 
-(defmethod expr :import-hashed [{:keys [c]}]
+(defmethod expr :import-hashed-raw [{:keys [c]}]
   (let [import (expr (first c))
         hash?  (when (> (count c) 1) ;; If yes, we have a hash
-                 (expr (second c)))]
+                 (expr (nth c 2)))]
     (assoc import :hash? hash?)))
 
-(defmethod expr :hash [{:keys [c]}]
+(defmethod expr :hash-raw [{:keys [c]}]
   (-> c
      (compact)
      (subs 7) ;; Cut the "sha256:" prefix here
      (str/trim)))
 
-(defmethod expr :import-type [{:keys [c]}]
+(defmethod expr :import-type-raw [{:keys [c]}]
   (-> c first expr))
 
 (defmethod expr :missing [_]
   (map->Import {:data (->Missing)}))
 
-(defmethod expr :env [{:keys [c]}]
+(defmethod expr :env-raw [{:keys [c]}]
   (let [envname (compact (nth c (if (string? (second c)) 2 1)))
         env (->Env envname)]
     (map->Import {:data env})))
 
-(defmethod expr :local [{:keys [c]}]
-  (let [raw-c (-> c first :c)
-        relative? (string? (first raw-c))
+(defmethod expr :local-raw [{:keys [c]}]
+  (let [relative? (string? (first c))
         prefix? (when relative?
-                  (first raw-c))
+                  (first c))
         compact-path-component #(-> % :c rest compact)
-        directory (->> (nth raw-c (if relative? 1 0))
+        directory (->> (nth c (if relative? 1 0))
                      :c
                      (map compact-path-component)
                      reverse) ;; Yes, we store the path components reversed
-        file (-> raw-c
+        file (-> c
                 (nth (if relative? 2 1))
                 :c first
                 compact-path-component)
@@ -212,7 +221,7 @@
 (defmethod expr :http [{:keys [c]}]
   (let [headers? (case (count c)
                    4   (-> c (nth 3) expr)
-                   6   (-> c (nth 4) expr)
+                   7   (-> c (nth 4) expr)
                    nil)
         headers? (when headers?
                    (assoc headers? :mode :code)) ;; FIXME: we should have a smart constructor
@@ -331,7 +340,7 @@
         ;; if we have  a simple identifier, the "prefix" is just the label
         var (->> children first expr)
         ;; at the end of `children` there might be a DeBrujin index
-        maybe-index (-> children butlast last)
+        maybe-index (-> children last)
         index? (= :natural-literal-raw (:t maybe-index))
         index (if index?
                 (-> maybe-index :c first :c first read-string)
@@ -378,7 +387,7 @@
       "Text/show"         (->TextShow)
       (fail/reserved-word! var e))))
 
-(defmethod expr :identifier [e]
+(defmethod expr :identifier-raw [e]
   (identifier e))
 
 (defmacro defexpr*
@@ -418,8 +427,8 @@
 (defexpr* :not-equal-expression     BoolNE       :not-equal)
 
 (defmethod expr :application-expression [{:keys [c t]}]
-  (if (> (count c) 1)
-    (let [exprs (remove #(= :whitespace-chunk (:t %)) c)
+  (if (> (count c) 2)
+    (let [exprs (remove #(= :nonempty-whitespace (:t %)) (butlast c))
           some? (= :Some (-> c first :t))]
       (loop [more (nnext exprs)
              app (cond
@@ -436,11 +445,11 @@
                  (->App app (expr (first more)))))))
     (expr (-> c first))))
 
-(defmethod expr :selector-expression [e]
+(defmethod expr :selector-expression-raw [e]
   (if (children? e)
-    (let [exprs (remove #(= :dot (:t %)) (:c e))
+    (let [exprs (->> (:c e) (remove #(= :dot (:t %))) (remove #(= :whitespace (:t %))))
           base  (expr (first exprs))
-          labels? (fn [l] (= :labels (:t l)))]
+          labels? (fn [l] (= :labels-raw (:t l)))]
       (loop [more (nnext exprs)
              sel ((if (labels? (second exprs))
                     ->Project
@@ -457,30 +466,30 @@
                   (expr (first more)))))))
     (-> e :c first expr))) ;; Otherwise we go to the primitive expression
 
-(defmethod expr :labels [{:keys [c t]}]
+(defmethod expr :labels-raw [{:keys [c t]}]
   (->> c
      rest
      (take-nth 2)
      (mapv expr)))
 
-(defmethod expr :primitive-expression [e]
+(defmethod expr :primitive-expression-raw [e]
   (let [first-tag (-> e :c first :t)
         children (:c e)]
     (case first-tag
-      :double-literal  (let [d (-> children first compact read-string)]
-                         (if (or (= d Double/NEGATIVE_INFINITY)
-                                 (= d Double/POSITIVE_INFINITY))
-                           (fail/double-out-of-bounds! (-> children first compact) e)
-                           (->DoubleLit d)))
-      :natural-literal (-> children first compact read-string ->NaturalLit)
-      :integer-literal (-> children first compact read-string ->IntegerLit)
-      nil              (->DoubleLit Double/NEGATIVE_INFINITY) ;; TODO: better way to do this?
-      :text-literal                          (-> children first expr)
+      :double-literal-raw  (let [d (-> children first compact read-string)]
+                             (if (or (= d Double/NEGATIVE_INFINITY)
+                                     (= d Double/POSITIVE_INFINITY))
+                               (fail/double-out-of-bounds! (-> children first compact) e)
+                               (->DoubleLit d)))
+      :natural-literal-raw (-> children first compact read-string ->NaturalLit)
+      :integer-literal-raw (-> children first compact read-string ->IntegerLit)
+      nil                  (->DoubleLit Double/NEGATIVE_INFINITY) ;; TODO: better way to do this?
+      :text-literal-raw                      (-> children first expr)
       :open-brace                            (-> children second expr)
       :open-angle                            (-> children second expr)
       :non-empty-list-literal                (-> children first expr)
       :keyword                               (-> children first expr)
-      :identifier                            (-> children first expr)
+      :identifier-raw                        (-> children first expr)
       :open-parens                           (-> children second expr))))
 
 (defmethod expr :union-type-or-literal [e]
@@ -545,7 +554,7 @@
        ->RecordT)
      (merge {first-label first-val} other-kvs))))
 
-(defmethod expr :label [e]
+(defmethod expr :label-raw [e]
   (let [quoted? (-> e :c first string?) ;; a quoted label is preceded by `
         actual-label ((if quoted? second first) (:c e))
         str-label (->> actual-label :c
@@ -587,7 +596,7 @@
   (Integer/parseInt (.substring s 2) 16))
 
 
-(defmethod expr :text-literal [e]
+(defmethod expr :text-literal-raw [e]
   (let [first-tag (-> e :c first :t)
         children (:c e)]
     (->TextLit
