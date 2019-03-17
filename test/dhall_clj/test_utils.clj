@@ -25,7 +25,8 @@
   for the 'successful' test cases."
   [test-folder]
   (let [files (->> (list-files test-folder)
-                 (remove failure-case?))
+                 (remove failure-case?)
+                 (remove #(string/includes? (str %) ".md")))
         map-of-testcases (group-by #(-> % str
                                        (string/replace #"A.dhall" "")
                                        (string/replace #"B.dhall" ""))

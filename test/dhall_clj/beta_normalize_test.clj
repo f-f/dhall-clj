@@ -5,6 +5,7 @@
              [dhall-clj.parse :refer [parse expr]]
              [dhall-clj.import :refer [resolve-imports]]
              [dhall-clj.beta-normalize :refer [beta-normalize]]
+             [dhall-clj.alpha-normalize :refer [alpha-normalize]]
              [dhall-clj.state :as s]
              [dhall-clj.test-utils :refer :all]
              [me.raynes.fs :as fs]
@@ -74,15 +75,21 @@
 (deftest normalization-suite
   (let [import-cache (s/new)]
     (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
-      (let [parent (fs/parent testcase)
-            f #(fs/with-mutable-cwd
-                 (fs/chdir parent)
-                 (-> %
-                    parse
-                    expr
-                    (resolve-imports import-cache)
-                    beta-normalize))]
+      (let [parent (fs/parent testcase)]
         (println "TESTCASE" testcase)
         (testing testcase
-          (is (= (f actual)
-                 (f expected))))))))
+          (is (= (fs/with-mutable-cwd
+                   (fs/chdir parent)
+                   (-> expected
+                      parse
+                      expr
+                      (resolve-imports import-cache)
+                      alpha-normalize))
+                 (fs/with-mutable-cwd
+                   (fs/chdir parent)
+                   (-> actual
+                      parse
+                      expr
+                      (resolve-imports import-cache)
+                      beta-normalize
+                      alpha-normalize)))))))))

@@ -99,9 +99,9 @@
           _ (fs/delete cache-file)
           [pr1 time-uncached] (time' (core/input-ast to-eval))
           [pr2 time-cached]   (time' (core/input-ast to-eval))]
-      (println "Time to fetch the uncached Prelude is > 1s")
-      (is (> time-uncached 1000))
-      (println "Time to fetch the cached Prelude is < 1s")
-      (is (< time-cached) 1000)
+      (println "Time to fetch the uncached Prelude is > 0.5s")
+      (is (> time-uncached 500))
+      (println "Time to fetch the cached Prelude is < 0.5s")
+      (is (< time-cached) 500)
       (println "The two Preludes are the same")
       (is (= (alpha-normalize pr1) pr2)))))

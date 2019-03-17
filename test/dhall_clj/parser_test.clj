@@ -269,13 +269,13 @@
                {:headers? nil
                 :url (uri "https://localhost/file")})})]
 
-   ["https://user:pass:more@localhost:8888/file?test#aaaa"
+   ["https://user:pass:more@localhost:8888/file?test"
     (map->Import
       {:mode :code
        :hash? nil
        :data (map->Remote
                {:headers? nil
-                :url (uri "https://user:pass:more@localhost:8888/file?test#aaaa")})})]
+                :url (uri "https://user:pass:more@localhost:8888/file?test")})})]
 
    ["http://user@example.com/some/file.dhall"
     (map->Import
@@ -317,8 +317,7 @@
    ["dhall-lang" "tests" "parser" "success" "importAlt"]
    ["dhall-lang" "tests" "parser" "success" "asText"]
    ["dhall-lang" "tests" "parser" "success" "unicodePaths"]
-   ;; Something's broken
-   ["dhall-lang" "tests" "parser" "success" "largeExpression"]
+   ["dhall-lang" "tests" "parser" "success" "spaceAfterListAppend"]
 
    ;; Waiting on issue #28
    ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])

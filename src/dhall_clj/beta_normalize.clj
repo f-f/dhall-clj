@@ -31,7 +31,8 @@
                   \backspace "\\b"
                   \newline "\\n"
                   \return "\\r"
-                  \tab "\\t"}
+                  \tab "\\t"
+                  \formfeed "\\f"}
         escape-control (fn [char]
                          (if (<= (int char) 30)
                            (format "\\u%04x" (int char))
@@ -476,7 +477,7 @@
       (if (and (= 1 (count new-chunks))
                (not (string? (first new-chunks))))
         (first new-chunks)
-        (->TextLit new-chunks))))
+        (->TextLit (compact-chunks new-chunks)))))
 
   dhall_clj.ast.TextAppend
   (beta-normalize [{:keys [a b]}]
@@ -512,9 +513,9 @@
     (let [decide (fn [l r]
                    (cond
                      (and (instance? ListLit l)
-                          (empty? l))            r
+                          (empty? (:exprs l)))   r
                      (and (instance? ListLit r)
-                          (empty? r))            l
+                          (empty? (:exprs r)))   l
                      (and (instance? ListLit l)
                           (instance? ListLit r)) (update l :exprs concat (:exprs r))
                      :else                       (->ListAppend l r)))]
@@ -592,9 +593,9 @@
     (letfn [(decide [l r]
               (cond
                 (and (instance? RecordLit l)
-                     (empty? l))              r
+                     (empty? (:kvs l)))       r
                 (and (instance? RecordLit r)
-                     (empty? r))              l
+                     (empty? (:kvs r)))       l
                 (and (instance? RecordLit l)
                      (instance? RecordLit r)) (->RecordLit
                                                 (->> (merge-with decide (:kvs l) (:kvs r))
@@ -607,9 +608,9 @@
     (letfn [(decide [l r]
               (cond
                 (and (instance? RecordT l)
-                     (empty? l))            r
+                     (empty? (:kvs l)))     r
                 (and (instance? RecordT r)
-                     (empty? r))            l
+                     (empty? (:kvs r)))     l
                 (and (instance? RecordT l)
                      (instance? RecordT r)) (->RecordT
                                               (->> (merge-with decide (:kvs l) (:kvs r))
@@ -622,9 +623,9 @@
     (letfn [(decide [l r]
               (cond
                 (and (instance? RecordLit l)
-                     (empty? l))              r
+                     (empty? (:kvs l)))       r
                 (and (instance? RecordLit r)
-                     (empty? r))              l
+                     (empty? (:kvs r)))       l
                 (and (instance? RecordLit l)
                      (instance? RecordLit r)) (->RecordLit
                                                 (->> (merge (:kvs l) (:kvs r))
@@ -672,7 +673,9 @@
           (if (every? (fn [k] (contains? kvs k)) ks)
             (beta-normalize (->RecordLit (select-keys kvs ks)))
             (->Project (->RecordLit (map-vals beta-normalize kvs)) ks)))
-        (assoc this :e e'))))
+        (if-not (seq ks)
+          (->RecordLit {})
+          (assoc this :e e')))))
 
   dhall_clj.ast.ImportAlt
   (beta-normalize [this]

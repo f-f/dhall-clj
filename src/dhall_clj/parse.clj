@@ -460,6 +460,7 @@
 (defmethod expr :labels [{:keys [c t]}]
   (->> c
      rest
+     butlast
      (take-nth 2)
      (mapv expr)))
 
