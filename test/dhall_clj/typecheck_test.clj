@@ -50,18 +50,17 @@
   (let [import-cache (s/new)]
     (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
       (let [parent (fs/parent testcase)
-            run (fn []
+            run (fn [text]
                   (fs/with-mutable-cwd
                     (fs/chdir parent)
-                    (-> (->Annot
-                         (-> actual parse expr)
-                         (-> expected parse expr))
-                       (resolve-imports import-cache)
-                       (typecheck {})))
-                  nil)]
+                    (-> text
+                       parse
+                       expr
+                       (resolve-imports import-cache))))]
         (println "TESTCASE" testcase)
         (testing testcase
-          (is (= nil (run))))))))
+          (is (= (-> expected run)
+                 (-> actual run (typecheck {})))))))))
 
 (defn valid-failing-testcases []
   (let [all (failure-testcases test-folder)]
