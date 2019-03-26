@@ -1,6 +1,7 @@
 (ns dhall-clj.beta-normalize
   (:require [dhall-clj.alpha-normalize :refer [alpha-normalize]]
             [dhall-clj.ast :refer :all]
+            [dhall-clj.binary :refer [encode]]
             [clojure.string :as string]
             [medley.core :refer [map-vals]])
   (:import [dhall_clj.ast NaturalLit TextLit BoolLit Lam App ListBuild ListFold
@@ -19,9 +20,9 @@
   "Returns `true` if two expressions are α-equivalent and β-equivalent and
   `false` otherwise"
   [a b]
-  (let [ab-normalize (comp beta-normalize alpha-normalize)]
-    (= (ab-normalize a)
-       (ab-normalize b))))
+  (let [term #(-> % beta-normalize alpha-normalize encode seq)]
+    (= (term a)
+       (term b))))
 
 
 (defn text-show [text]
