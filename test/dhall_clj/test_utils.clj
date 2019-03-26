@@ -45,7 +45,8 @@
   associated Dhall expression."
   [test-folder]
   (let [files (->> (list-files test-folder)
-                 (filter failure-case?))]
+                 (filter failure-case?)
+                 (remove #(string/includes? (str %) ".md")))]
     (into {} (mapv #(vector (str %) (slurp %)) files))))
 
 

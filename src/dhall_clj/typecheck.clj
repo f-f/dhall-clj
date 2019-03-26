@@ -540,9 +540,9 @@
                   (= kind0 (->Const :kind))
                   :kind
 
-                  (and (= kind0 (->Const :kind))
+                  (and (= kind0 (->Const :sort))
                        (judgmentally-equal t0 (->Const :kind)))
-                  :kind
+                  :sort
 
                   :else (fail/invalid-field-type! ctx this {:key k0 :type t0}))]
           (mapv
@@ -608,20 +608,31 @@
                                       ctx
                                       this
                                       {:key k :value v :const c :key0 k0 :value0 v0 :meta :sort})
-                                    (when-not (judgmentally-equal t (->Const :type))
-                                      (fail/invalid-field-type! ctx this {:key k :type t})))
+                                    (when-not (judgmentally-equal t (->Const :kind))
+                                      (fail/invalid-field! ctx this {:key k :type t})))
                   (fail/invalid-field! ctx this {:key k :type t}))
                 [k t]))
             kvs)))))
 
   dhall_clj.ast.UnionT
   (typecheck [{:keys [kvs] :as this} ctx]
-    (mapv
-      (fn [[k t]]
-        (when-not (instance? Const (-> t (typecheck ctx) beta-normalize))
-          (fail/invalid-alternative-type! ctx this {:k k :t t})))
-      kvs)
-    (->Const :type))
+    (if (empty? kvs)
+      (->Const :type)
+      (let [[[k0 t0] & more] kvs
+            s0 (-> t0 (typecheck ctx) beta-normalize)
+            c0 (if (instance? Const s0)
+                 (:c s0)
+                 (fail/invalid-alternative-type! ctx this {:k k0 :t t0}))]
+        (mapv
+         (fn [[k t]]
+           (let [s (-> t (typecheck ctx) beta-normalize)
+                 c (if (instance? Const s)
+                     (:c s)
+                     (fail/invalid-alternative-type! ctx this {:k k :t t}))]
+             (when (not= c0 c)
+               (fail/alternative-annotation-mismatch! ctx this {:k k :t t :c c :k0 k0 :t0 t0 :c0 c0}))))
+         more)
+        (->Const c0))))
 
   dhall_clj.ast.UnionLit
   (typecheck [{:keys [k v kvs] :as this} ctx]

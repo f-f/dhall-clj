@@ -36,9 +36,6 @@
   "Here we list all the tests that blow up, so we categorize and exclude them.
   Note: they are vectors because the path creation is platform-sensitive."
   [
-   ;; Something is wrong with union typechecking
-   ;; see https://github.com/dhall-lang/dhall-haskell/pull/763/files
-   ["dhall-lang" "tests" "typecheck" "failure" "mixedUnions.dhall"]
    ;; Duplicate fields should fail to typecheck
    ["dhall-lang" "tests" "typecheck" "failure" "duplicateFields.dhall"]])
 

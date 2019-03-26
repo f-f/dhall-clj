@@ -200,6 +200,7 @@
        (ex/derive ~kw ::typecheck)
        (def ~sym (partial type-error! ~kw)))))
 
+(typecheck-ex alternative-annotation-mismatch)
 (typecheck-ex annot-mismatch)
 (typecheck-ex cant-access)
 (typecheck-ex cant-add)
