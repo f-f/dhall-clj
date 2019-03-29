@@ -30,7 +30,8 @@
 
 ;; Haskell implementation test suite
 
-(def test-folder "dhall-lang/tests/typecheck")
+(def typecheck-test-folder "dhall-lang/tests/typecheck")
+(def typeinference-test-folder "dhall-lang/tests/type-inference")
 
 (def problematic
   "Here we list all the tests that blow up, so we categorize and exclude them.
@@ -40,30 +41,38 @@
    ["dhall-lang" "tests" "typecheck" "failure" "duplicateFields.dhall"]])
 
 
-(defn valid-testcases []
+(defn valid-testcases [test-folder]
   (let [all (success-testcases test-folder)]
     (->> problematic
        (map #(->> % (apply io/file) str))
        (apply dissoc all))))
 
+(deftest typeinference-success-suite
+  (doseq [[testcase {:keys [actual expected]}] (valid-testcases typeinference-test-folder)]
+    (println "TESTCASE" testcase)
+    (testing testcase
+      (is (= (-> expected parse expr)
+             (-> actual parse expr (typecheck {})))))))
+
 (deftest typecheck-success-suite
   (let [import-cache (s/new)]
-    (doseq [[testcase {:keys [actual expected]}] (valid-testcases)]
+    (doseq [[testcase {:keys [actual expected]}] (valid-testcases typecheck-test-folder)]
       (let [parent (fs/parent testcase)
-            run (fn [text]
+            run (fn []
                   (fs/with-mutable-cwd
                     (fs/chdir parent)
-                    (-> text
-                       parse
-                       expr
-                       (resolve-imports import-cache))))]
+                    (-> (->Annot
+                         (-> actual parse expr)
+                         (-> expected parse expr))
+                        (resolve-imports import-cache)
+                        (typecheck {})))
+                  nil)]
         (println "TESTCASE" testcase)
         (testing testcase
-          (is (= (-> expected run)
-                 (-> actual run (typecheck {})))))))))
+          (is (= nil (run))))))))
 
 (defn valid-failing-testcases []
-  (let [all (failure-testcases test-folder)]
+  (let [all (failure-testcases typecheck-test-folder)]
     (->> problematic
        (map #(->> % (apply io/file) str))
        (apply dissoc all))))
