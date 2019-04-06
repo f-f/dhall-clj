@@ -584,8 +584,8 @@
                   (= kind0 (->Const :kind))
                   :kind
 
-                  (and (= kind0 (->Const :sort)))
-                       ;;(judgmentally-equal t0 (->Const :kind)))
+                  (and (= kind0 (->Const :sort))
+                       (judgmentally-equal t0 (->Const :kind)))
                   :sort
 
                   :else (fail/invalid-field-type! ctx this {:key k0 :value v0}))]
@@ -608,7 +608,7 @@
                                       ctx
                                       this
                                       {:key k :value v :const c :key0 k0 :value0 v0 :meta :sort})
-                                    (when-not true ;;(judgmentally-equal t (->Const :kind))
+                                    (when-not (judgmentally-equal t (->Const :kind))
                                       (fail/invalid-field! ctx this {:key k :type t})))
                   (fail/invalid-field! ctx this {:key k :type t}))
                 [k t]))
