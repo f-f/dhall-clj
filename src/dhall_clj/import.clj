@@ -213,10 +213,10 @@
   (resolve-imports [{:keys [a b]} state]
     (ex/try+
       (resolve-imports a state)
-      (catch-data :dhall-clj.fail/imports {:as data-a}
+      (catch-data :dhall-clj.fail/dhall-clj {:as data-a}
         (ex/try+
           (resolve-imports b state)
-          (catch-data :dhall-clj.fail/imports {:as data-b}
+          (catch-data :dhall-clj.fail/dhall-clj {:as data-b}
             (let [typ-a (:type data-a)
                   typ-b (:type data-b)
                   imported (:stack state)]

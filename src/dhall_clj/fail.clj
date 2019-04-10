@@ -8,7 +8,7 @@
 
 (ex/derive ::read      ::dhall-clj)
 (ex/derive ::imports   ::dhall-clj)
-(ex/derive ::bbinary   ::dhall-clj)
+(ex/derive ::binary    ::dhall-clj)
 (ex/derive ::typecheck ::dhall-clj)
 
 
