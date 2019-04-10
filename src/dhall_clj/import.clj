@@ -467,13 +467,13 @@
 
   dhall_clj.ast.UnionT
   (resolve-imports [this state]
-    (update this :kvs (fn [kvs] (map-vals #(resolve-imports % state) kvs))))
+    (update this :kvs (fn [kvs] (map-vals #(when % (resolve-imports % state)) kvs))))
 
   dhall_clj.ast.UnionLit
-  (resolve-imports [this state]
+  (resolve-imports [{:keys [v?] :as this} state]
     (-> this
-       (update :v resolve-imports state)
-       (update :kvs (fn [kvs] (map-vals #(resolve-imports % state) kvs)))))
+       (assoc :v? (when v? (resolve-imports v? state)))
+       (update :kvs (fn [kvs] (map-vals #(when % (resolve-imports % state)) kvs)))))
 
   dhall_clj.ast.Combine
   (resolve-imports [this state]

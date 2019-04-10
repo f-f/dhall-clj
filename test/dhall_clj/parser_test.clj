@@ -245,7 +245,7 @@
                                       :prefix? "."})
                              :hash? nil
                              :mode :code})
-                :url (uri "https://localhost/file")})})]
+                :url (assoc (uri "https://localhost/file") :path ["file"])})})]
 
    ["https://localhost/file using (./headers)"
     (map->Import
@@ -259,7 +259,7 @@
                                       :prefix? "."})
                              :hash? nil
                              :mode :code})
-                :url (uri "https://localhost/file")})})]
+                :url (assoc (uri "https://localhost/file") :path ["file"])})})]
 
    ["https://localhost/file"
     (map->Import
@@ -267,7 +267,7 @@
        :hash? nil
        :data (map->Remote
                {:headers? nil
-                :url (uri "https://localhost/file")})})]
+                :url (assoc (uri "https://localhost/file") :path ["file"])})})]
 
    ["https://user:pass:more@localhost:8888/file?test"
     (map->Import
@@ -275,7 +275,7 @@
        :hash? nil
        :data (map->Remote
                {:headers? nil
-                :url (uri "https://user:pass:more@localhost:8888/file?test")})})]
+                :url (assoc (uri "https://user:pass:more@localhost:8888/file?test") :path ["file"])})})]
 
    ["http://user@example.com/some/file.dhall"
     (map->Import
@@ -283,7 +283,7 @@
        :hash? nil
        :data (map->Remote
                {:headers? nil
-                :url (uri "http://user@example.com/some/file.dhall")})})]
+                :url (assoc (uri "http://user@example.com/some/file.dhall") :path ["some" "file.dhall"])})})]
 
    ;; Regressions
    ["1 + 2"
@@ -318,6 +318,20 @@
    ["dhall-lang" "tests" "parser" "success" "asText"]
    ["dhall-lang" "tests" "parser" "success" "unicodePaths"]
    ["dhall-lang" "tests" "parser" "success" "spaceAfterListAppend"]
+   ["dhall-lang" "tests" "parser" "success" "import" "urls"]
+   ["dhall-lang" "tests" "parser" "success" "import" "hash"]
+   ["dhall-lang" "tests" "parser" "success" "import" "parenthesizeUsing"]
+   ["dhall-lang" "tests" "parser" "success" "import" "importAlt"]
+   ["dhall-lang" "tests" "parser" "success" "import" "pathTermination"]
+   ["dhall-lang" "tests" "parser" "success" "import" "quotedPaths"]
+   ["dhall-lang" "tests" "parser" "success" "builtinNameAsField"]
+   ["dhall-lang" "tests" "parser" "success" "import" "paths"]
+   ["dhall-lang" "tests" "parser" "success" "import" "environmentVariables"]
+   ["dhall-lang" "tests" "parser" "success" "import" "unicodePaths"]
+   ["dhall-lang" "tests" "parser" "success" "import" "asText"]
+
+   ;; https://github.com/dhall-lang/dhall-lang/issues/476
+   ["dhall-lang" "tests" "parser" "success" "whitespaceBuffet"]
 
    ;; Waiting on issue #28
    ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])

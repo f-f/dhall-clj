@@ -9,7 +9,7 @@
             NaturalEven NaturalOdd NaturalToInteger NaturalShow IntegerLit
             IntegerShow IntegerToDouble DoubleLit DoubleShow ListLit ListLength
             ListHead ListLast ListIndexed ListReverse RecordLit TextShow
-            UnionLit RecordT UnionT Some None]))
+            UnionLit RecordT UnionT Some None Field]))
 
 (defprotocol IBetaNormalize
   (beta-normalize [this]
@@ -580,14 +580,14 @@
   dhall_clj.ast.UnionT
   (beta-normalize [this]
     (update this :kvs
-            #(->> % (map-vals beta-normalize) (into (sorted-map)))))
+            #(->> % (map-vals (fn [v?] (when v? (beta-normalize v?)))) (into (sorted-map)))))
 
   dhall_clj.ast.UnionLit
-  (beta-normalize [this]
+  (beta-normalize [{:keys [v?] :as this}]
     (-> this
-       (update :v beta-normalize)
+       (assoc :v? (when v? (beta-normalize v?)))
        (update :kvs
-               #(->> % (map-vals beta-normalize) (into (sorted-map))))))
+               #(->> % (map-vals (fn [v] (when v (beta-normalize v)))) (into (sorted-map))))))
 
   dhall_clj.ast.Combine
   (beta-normalize [{:keys [a b]}]
@@ -636,16 +636,44 @@
 
   dhall_clj.ast.Merge
   (beta-normalize [{:keys [a b type?]}]
-    (let [a'     (beta-normalize a)
-          b'     (beta-normalize b)
-          type?' (when type? (beta-normalize type?))]
-      (if (and (instance? RecordLit a')
-               (instance? UnionLit b')
-               (contains? (:kvs a') (:k b')))
-        (beta-normalize
-          (->App (get (:kvs a') (:k b'))
-                 (:v b')))
-        (->Merge a' b' type?'))))
+    (let [a'       (beta-normalize a)
+          b'       (beta-normalize b)
+          type?'   (when type? (beta-normalize type?))
+          fallback (->Merge a' b' type?')]
+      (if (instance? RecordLit a')
+        (cond
+          (instance? UnionLit b')
+          (if (contains? (:kvs a') (:k b'))
+            (beta-normalize
+             (->App (get (:kvs a') (:k b'))
+                    (:v? b')))
+            fallback)
+
+          (and (instance? Field b')
+               (instance? UnionT (:e b')))
+          (let [kvsX (:kvs a')
+                kvsY (:kvs (:e b'))
+                kY   (:k b')]
+            (if (and (contains? kvsY kY)  ;; If the key is in the union
+                     (not (get kvsY kY))  ;; and its value is empty (so we have an empty alternative)
+                     (contains? kvsX kY)) ;; and it's also in the record with the functions
+              (get kvsX kY)
+              fallback))
+
+          (and (instance? App b')
+               (instance? Field (:a b'))
+               (instance? UnionT (:e (:a b'))))
+          (let [kvsX (:kvs a')
+                kvsY (:kvs (:e (:a b')))
+                kY   (:k (:a b'))
+                vY   (:b b')]
+            (if (and (get kvsY kY)
+                     (contains? kvsX kY))
+              (beta-normalize (->App (get kvsX kY) vY))
+              fallback))
+
+          :else fallback)
+        fallback)))
 
   dhall_clj.ast.Field
   (beta-normalize [{:keys [e k] :as this}]
@@ -655,14 +683,6 @@
         (if-let [v (get (:kvs e') k)]
           (beta-normalize v)
           (->Field (->RecordLit (map-vals beta-normalize (:kvs e'))) k))
-
-        (instance? UnionT e')
-        (if-let [v (get (:kvs e') k)]
-          (->Lam
-            k
-            (beta-normalize v)
-            (->UnionLit k (->Var k 0) (dissoc (:kvs e') k)))
-          (->Field (->UnionT (map-vals beta-normalize (:kvs e'))) k))
 
         :else (assoc this :e e'))))
 

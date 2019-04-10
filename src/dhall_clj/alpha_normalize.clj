@@ -271,13 +271,13 @@
 
   dhall_clj.ast.UnionT
   (alpha-normalize [this]
-    (update this :kvs (fn [kvs] (map-vals alpha-normalize kvs))))
+    (update this :kvs (fn [kvs] (map-vals #(when % (alpha-normalize %)) kvs))))
 
   dhall_clj.ast.UnionLit
-  (alpha-normalize [this]
+  (alpha-normalize [{:keys [v?] :as this}]
     (-> this
-       (update :v alpha-normalize)
-       (update :kvs (fn [kvs] (map-vals alpha-normalize kvs)))))
+       (assoc :v? (when v? (alpha-normalize v?)))
+       (update :kvs (fn [kvs] (map-vals #(when % (alpha-normalize %)) kvs)))))
 
   dhall_clj.ast.Combine
   (alpha-normalize [this]

@@ -259,8 +259,8 @@
     "UnionT") ;; FIXME
 
   dhall_clj.ast.UnionLit
-  (emit [{:keys [k v kvs]}]
-    `{~k ~(emit v)})
+  (emit [{:keys [k v? kvs]}]
+    `{~k ~(when v? (emit v?))})
 
   dhall_clj.ast.CombineTypes
   (emit [{:keys [a b]}]

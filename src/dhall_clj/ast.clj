@@ -78,7 +78,7 @@
 (defrecord RecordT [kvs])
 (defrecord RecordLit [kvs])
 (defrecord UnionT [kvs])
-(defrecord UnionLit [k v kvs])
+(defrecord UnionLit [k v? kvs])
 (defrecord Combine [a b])
 (defrecord CombineTypes [a b])
 (defrecord Prefer [a b])
@@ -369,13 +369,13 @@
 
   UnionT
   (shift [this diff var]
-    (update this :kvs (fn [kvs] (map-vals #(shift % diff var) kvs))))
+    (update this :kvs (fn [kvs] (map-vals #(when % (shift % diff var)) kvs))))
 
   UnionLit
-  (shift [this diff var]
+  (shift [{:keys [v?] :as this} diff var]
     (-> this
-       (update :v shift diff var)
-       (update :kvs (fn [kvs] (map-vals #(shift % diff var) kvs)))))
+       (assoc :v? (when v? (shift v? diff var)))
+       (update :kvs (fn [kvs] (map-vals #(when % (shift % diff var)) kvs)))))
 
   Combine
   (shift [this diff var]
@@ -672,13 +672,13 @@
 
   UnionT
   (subst [this var e]
-    (update this :kvs (fn [kvs] (map-vals #(subst % var e) kvs))))
+    (update this :kvs (fn [kvs] (map-vals #(when % (subst % var e)) kvs))))
 
   UnionLit
-  (subst [this var e]
+  (subst [{:keys [v?] :as this} var e]
     (-> this
-       (update :v subst var e)
-       (update :kvs (fn [kvs] (map-vals #(subst % var e) kvs)))))
+       (assoc :v? (when v? (subst v? var e)))
+       (update :kvs (fn [kvs] (map-vals #(when % (subst % var e)) kvs)))))
 
   Combine
   (subst [this var e]

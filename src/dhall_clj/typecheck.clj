@@ -540,8 +540,7 @@
                   (= kind0 (->Const :kind))
                   :kind
 
-                  (and (= kind0 (->Const :sort))
-                       (judgmentally-equal t0 (->Const :kind)))
+                  (= kind0 (->Const :sort))
                   :sort
 
                   :else (fail/invalid-field-type! ctx this {:key k0 :type t0}))]
@@ -562,9 +561,7 @@
                                   (fail/field-annotation-mismatch!
                                     ctx
                                     this
-                                    {:key k :type t :const c :key0 k0 :type0 t0 :meta :sort})
-                                  (when-not (judgmentally-equal t (->Const :kind))
-                                    (fail/invalid-field-type! ctx this {:key k :type t})))
+                                    {:key k :type t :const c :key0 k0 :type0 t0 :meta :sort}))
                 (fail/invalid-field-type! ctx this {:key k :type t})))
             (rest kvs))
           c))))
@@ -584,8 +581,7 @@
                   (= kind0 (->Const :kind))
                   :kind
 
-                  (and (= kind0 (->Const :sort))
-                       (judgmentally-equal t0 (->Const :kind)))
+                  (= kind0 (->Const :sort))
                   :sort
 
                   :else (fail/invalid-field-type! ctx this {:key k0 :value v0}))]
@@ -607,38 +603,37 @@
                                     (fail/field-mismatch!
                                       ctx
                                       this
-                                      {:key k :value v :const c :key0 k0 :value0 v0 :meta :sort})
-                                    (when-not (judgmentally-equal t (->Const :kind))
-                                      (fail/invalid-field! ctx this {:key k :type t})))
+                                      {:key k :value v :const c :key0 k0 :value0 v0 :meta :sort}))
                   (fail/invalid-field! ctx this {:key k :type t}))
                 [k t]))
             kvs)))))
 
   dhall_clj.ast.UnionT
   (typecheck [{:keys [kvs] :as this} ctx]
-    (if (empty? kvs)
+    (if (every? nil? (vals kvs))
       (->Const :type)
-      (let [[[k0 t0] & more] kvs
+      (let [[[k0 t0] & more] (remove (fn [[k t]] (nil? t)) kvs)
             s0 (-> t0 (typecheck ctx) beta-normalize)
             c0 (if (instance? Const s0)
                  (:c s0)
                  (fail/invalid-alternative-type! ctx this {:k k0 :t t0}))]
         (mapv
          (fn [[k t]]
-           (let [s (-> t (typecheck ctx) beta-normalize)
-                 c (if (instance? Const s)
-                     (:c s)
-                     (fail/invalid-alternative-type! ctx this {:k k :t t}))]
-             (when (not= c0 c)
-               (fail/alternative-annotation-mismatch! ctx this {:k k :t t :c c :k0 k0 :t0 t0 :c0 c0}))))
-         more)
+           (when t
+             (let [s (-> t (typecheck ctx) beta-normalize)
+                   c (if (instance? Const s)
+                       (:c s)
+                       (fail/invalid-alternative-type! ctx this {:k k :t t}))]
+               (when (not= c0 c)
+                 (fail/alternative-annotation-mismatch! ctx this {:k k :t t :c c :k0 k0 :t0 t0 :c0 c0})))))
+         kvs)
         (->Const c0))))
 
   dhall_clj.ast.UnionLit
-  (typecheck [{:keys [k v kvs] :as this} ctx]
+  (typecheck [{:keys [k v? kvs] :as this} ctx]
     (when (contains? kvs k)
       (fail/duplicate-alternative! ctx this {:k k}))
-    (let [typ (typecheck v ctx)
+    (let [typ (typecheck v? ctx)
           union (->UnionT (assoc kvs k (beta-normalize typ)))
           _ (typecheck union ctx)]
       union))
@@ -729,38 +724,46 @@
           diffB (difference keysB keysA)
           _ (when-not (empty? diffA)
               (fail/unused-handler! ctx this {:unused diffA}))
-          t (if type?
-              type?
-              (if (empty? ktsA)
-                (fail/missing-merge-type! ctx this)
-                (let [[k t] (first ktsA)]
-                  (if-not (instance? Pi t)
-                    (fail/handler-not-a-function! ctx this {:key k :handler t})
-                    (shift (:body t) -1 (->Var (:arg t) 0))))))]
+          [keyX? t]
+          (if type?
+            [nil, type?]
+            (if (empty? ktsA)
+              (fail/missing-merge-type! ctx this)
+              (let [[k t] (first ktsA)]
+                [k
+                 (if-not (contains? ktsB k)
+                   (fail/unused-handler! ctx this {:unused diffA})
+                   (if-not (get ktsB k)
+                     t
+                     (if-not (instance? Pi t)
+                       (fail/handler-not-a-function! ctx this {:key k :handler t})
+                       (shift (:body t) -1 (->Var (:arg t) 0)))))])))
+          _ (typecheck t ctx)]
       (mapv
         (fn [[kB tB]]
           (if-let [tA (get ktsA kB)]
-            (if (instance? Pi tA)
-              (let [{:keys [arg type body]} tA
-                    _ (when-not (judgmentally-equal tB type)
-                        (fail/handler-input-type-mismatch!
-                          ctx
-                          this
-                          {:key kB :type tB :annotation type}))
-                    body' (shift body -1 (->Var arg 0))]
-                (when-not (judgmentally-equal t body')
-                  (if type?
-                    (fail/invalid-handler-output-type!
-                      ctx
-                      this
-                      {:key kB :fn-ann body' :merge-ann t})
-                    (fail/handler-output-type-mismatch!
-                      ctx
-                      this
-                      {:key-record (ffirst ktsA) :type t :key-union kB :body-type body'}))))
-              (fail/handler-not-a-function! ctx this {:handler tA :key kB}))
+            (let [t3 (if-not tB
+                       tA
+                       (if (instance? Pi tA)
+                         (let [{:keys [arg type body]} tA
+                               _ (when-not (judgmentally-equal tB type)
+                                   (fail/handler-input-type-mismatch!
+                                    ctx
+                                    this
+                                    {:key kB :type tB :annotation type}))]
+                           (shift body -1 (->Var arg 0)))
+                         (fail/handler-not-a-function! ctx this {:handler tA :key kB})))]
+              (when-not (judgmentally-equal t t3)
+                (if-not keyX?
+                  (fail/invalid-handler-output-type!
+                   ctx
+                   this
+                   {:key kB :fn-ann t3 :merge-ann t})
+                  (fail/handler-output-type-mismatch!
+                   ctx
+                   this
+                   {:key-record (ffirst ktsA) :type t :key-union kB :body-type t3}))))
             (fail/missing-handler! ctx this {:excess diffB})))
-
         ktsB)
       t))
 
@@ -781,7 +784,9 @@
           (if (instance? UnionT e')
             (let [kts (:kvs e')]
               (if (contains? kts k)
-                (->Pi k (get kts k) e')
+                (if (get kts k)
+                  (->Pi k (get kts k) e')
+                  (->UnionT kts))
                 (fail/missing-field! ctx this {:key k :type e'})))
             (fail/cant-access! ctx this {:key k :record e :record-type e'})))
 

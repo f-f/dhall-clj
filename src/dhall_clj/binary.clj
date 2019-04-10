@@ -157,7 +157,7 @@
                    b' (decbor b)]
                (assert-len! e 3)
                (if (nil? typ?)
-                 (->Merge a' b' (decbor typ?))
+                 (->Merge a' b' nil)
                  (->Merge a' b' (decbor typ?))))
           7  (->RecordT   (map-vals decbor (second e)))
           8  (->RecordLit (map-vals decbor (second e)))
@@ -167,10 +167,10 @@
           10 (let [[rec & ks] (rest e)]
                (assert-len! e 3)
                (->Project (decbor rec) ks))
-          11 (->UnionT (map-vals decbor (second e)))
-          12 (let [[k v kvs] (rest e)]
+          11 (->UnionT (map-vals #(when-not (nil? %) (decbor %)) (second e)))
+          12 (let [[k v? kvs] (rest e)]
                (assert-len! e 4)
-               (->UnionLit k (decbor v) (map-vals decbor kvs)))
+               (->UnionLit k (when-not (nil? v?) (decbor v?)) (map-vals #(when-not (nil? %) (decbor %)) kvs)))
           14 (let [[test then else] (rest e)]
                (assert-len! e 4)
                (->BoolIf (decbor test) (decbor then) (decbor else)))
@@ -465,11 +465,11 @@
 
   dhall_clj.ast.UnionT
   (cbor [{:keys [kvs]}]
-    [11 (->> (map-vals cbor kvs) (into (sorted-map)))])
+    [11 (->> (map-vals #(when-not (nil? %) (cbor %)) kvs) (into (sorted-map)))])
 
   dhall_clj.ast.UnionLit
-  (cbor [{:keys [k v kvs]}]
-    [12 k (cbor v) (->> (map-vals cbor kvs) (into (sorted-map)))])
+  (cbor [{:keys [k v? kvs]}]
+    [12 k (when-not (nil? v?) (cbor v?)) (->> (map-vals #(when-not (nil? %) (cbor %)) kvs) (into (sorted-map)))])
 
   dhall_clj.ast.CombineTypes
   (cbor [{:keys [a b]}]
