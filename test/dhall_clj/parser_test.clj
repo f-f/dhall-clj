@@ -330,8 +330,8 @@
    ["dhall-lang" "tests" "parser" "success" "import" "unicodePaths"]
    ["dhall-lang" "tests" "parser" "success" "import" "asText"]
 
-   ;; https://github.com/dhall-lang/dhall-lang/issues/476
-   ["dhall-lang" "tests" "parser" "success" "whitespaceBuffet"]
+   ;; unstable
+   ["dhall-lang" "tests" "parser" "success" "largeExpression"]
 
    ;; Waiting on issue #28
    ["dhall-lang" "tests" "parser" "success" "quotedPaths"]])

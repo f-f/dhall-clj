@@ -56,6 +56,8 @@
             ;; We add negative lookahead to avoid matching keywords in simple labels
             (str/replace #"simple-label = (.*)" "simple-label = keyword 1*simple-label-next-char / !keyword (simple-label-first-char *simple-label-next-char)")
             (str/replace #"nonreserved-label = (.*)" "nonreserved-label = \"`\" quoted-label \"`\" / reserved-clj 1*simple-label-next-char / !reserved-clj (simple-label-first-char *simple-label-next-char)")
+            ;; Fix comment rule ambiguity
+            (str/replace #"block-comment-char block-comment-continue" "!\"{-\" block-comment-char block-comment-continue")
             ;; Grammar apparently doesn't allow lowercase hashes
             (str/replace #"HEXDIG = " "HEXDIG = \"a\" /  \"b\" / \"c\" / \"d\" / \"e\" / \"f\" / "))
          "\n\n"
@@ -276,9 +278,7 @@
       :merge               (->Merge
                             (-> c (nth 2) expr)
                             (-> c (nth 4) expr)
-                            (if (>= (count c) 9)
-                              (-> c (nth 8) expr)
-                              nil))
+                            (-> c (nth 8) expr))
       "["                   (-> c (nth 2) expr)
       :annotated-expression (-> c first expr))))
 
@@ -395,22 +395,25 @@
 
 (defmethod expr :application-expression [{:keys [c t]}]
   (if (> (count c) 1)
-    (let [exprs (remove #(= :whsp1 (:t %)) c)
-          some? (= :Some (-> c first :t))]
+    (let [exprs (remove #(= :whsp1 (:t %)) c)]
       (loop [more (nnext exprs)
-             app (cond
-                   some?
-                   (->Some (expr (second exprs)))
-
-                   :else
-                   (->App
+             app (->App
                      (expr (first exprs))
-                     (expr (second exprs))))]
+                     (expr (second exprs)))]
         (if (empty? more)
           app
           (recur (rest more)
                  (->App app (expr (first more)))))))
     (expr (-> c first))))
+
+(defmethod expr :first-application-expression [{:keys [c]}]
+  (let [first-tag (-> c first :t)]
+    (case first-tag
+      :merge (->Merge (-> c (nth 2) expr) (-> c (nth 4) expr) nil)
+
+      :Some (->Some (-> c (nth 2) expr))
+
+      :import-expression (-> c first expr))))
 
 (defmethod expr :selector-expression [e]
   (if (children? e)
